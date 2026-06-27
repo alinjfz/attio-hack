@@ -17,8 +17,8 @@ import saveCvText from "../server/save-cv-text.server";
 import researchCandidate from "../server/research-candidate.server";
 import { BundlePreview } from "./bundle-preview";
 import draftRejection from "../server/draft-rejection.server";
+import { InlineAudioPlayer } from "./single-audio-dialog";
 import { openApprovalDialog } from "./research-flow";
-import { openSingleAudioDialog } from "./audio-playlist-flow";
 import { TierBadge } from "./tier-badge";
 
 function readText(
@@ -75,6 +75,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
   );
   const [researching, setResearching] = useState(false);
   const [draftingRejection, setDraftingRejection] = useState(false);
+  const [savedAudioScript, setSavedAudioScript] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const candidateName = person?.name?.full_name ?? "Candidate";
@@ -83,6 +84,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
   const fitTier = readTier(person?.fit_tier);
   const twoLiner = readText(person?.two_liner);
   const audioSummaryScript = readText(person?.audio_summary_script);
+  const playableScript = savedAudioScript ?? audioSummaryScript;
   const roleContext = readRoleContext(person?.role);
   const hasRole = !!roleContext.roleRecordId;
 
@@ -94,6 +96,13 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
       cvText: initialCv,
     },
   );
+
+  const handleApproved = (result?: { audioScript?: string }) => {
+    setRefreshKey((value) => value + 1);
+    if (result?.audioScript) {
+      setSavedAudioScript(result.audioScript);
+    }
+  };
 
   const handleSaveCv = async (values: { cvText: string }) => {
     try {
@@ -135,7 +144,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         candidateName,
         result,
         roleTitle: roleContext.roleTitle,
-        onApproved: () => setRefreshKey((value) => value + 1),
+        onApproved: handleApproved,
       });
       setPreview(result);
     } catch (error) {
@@ -168,7 +177,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         result,
         roleTitle: roleContext.roleTitle,
         focus: "rejection",
-        onApproved: () => setRefreshKey((value) => value + 1),
+        onApproved: handleApproved,
       });
     } catch (error) {
       await showToast({
@@ -179,16 +188,6 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
     } finally {
       setDraftingRejection(false);
     }
-  };
-
-  const handlePlayAudioSummary = async () => {
-    if (!audioSummaryScript) {
-      return;
-    }
-    await openSingleAudioDialog({
-      script: audioSummaryScript,
-      candidateName,
-    });
   };
 
   return (
@@ -229,12 +228,8 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         disabled={researching || draftingRejection}
       />
 
-      {audioSummaryScript && (
-        <Button
-          label="Play audio summary"
-          onClick={handlePlayAudioSummary}
-          disabled={researching || draftingRejection}
-        />
+      {playableScript && (
+        <InlineAudioPlayer script={playableScript} candidateName={candidateName} />
       )}
 
       {preview && <BundlePreview fit={preview.fit} bundle={preview.bundle} />}

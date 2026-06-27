@@ -11,6 +11,8 @@ const appSettingsSchema = {
     tavily_api_key: Settings.string(),
     enable_slng: Settings.boolean(),
     slng_api_key: Settings.string(),
+    slng_tts_model: Settings.string(),
+    slng_tts_voice: Settings.string(),
   },
 } satisfies SettingsSchema;
 

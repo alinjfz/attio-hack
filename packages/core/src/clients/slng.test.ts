@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { arrayBufferToBase64, textToSpeech } from "./slng.js";
+import {
+  arrayBufferToBase64,
+  buildSlngTtsEndpoint,
+  DEFAULT_SLNG_TTS_MODEL,
+  textToSpeech,
+} from "./slng.js";
 
 describe("slng client", () => {
   const originalFetch = global.fetch;
@@ -13,6 +18,12 @@ describe("slng client", () => {
     expect(encoded).toBe("SGk=");
   });
 
+  it("buildSlngTtsEndpoint uses deployed aura:2-en model path", () => {
+    expect(buildSlngTtsEndpoint(DEFAULT_SLNG_TTS_MODEL)).toBe(
+      "https://api.slng.ai/v1/tts/slng/deepgram/aura:2-en",
+    );
+  });
+
   it("textToSpeech resolves with audioBase64 and contentType", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
@@ -23,6 +34,10 @@ describe("slng client", () => {
     const result = await textToSpeech("hello", { apiKey: "test-api-key" });
     expect(result.audioBase64).toBeDefined();
     expect(result.contentType).toBe("audio/wav");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://api.slng.ai/v1/tts/slng/deepgram/aura:2-en",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("textToSpeech uses default content-type if missing", async () => {

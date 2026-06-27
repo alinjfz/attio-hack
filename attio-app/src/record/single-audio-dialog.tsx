@@ -2,49 +2,35 @@ import { Button, LoadingState, Section, TextBlock, showToast } from "attio/clien
 import { useEffect, useRef, useState } from "react";
 import synthesizeAudio from "../server/synthesize-audio.server";
 
-export function SingleAudioDialog({
-  hideDialog,
+export function InlineAudioPlayer({
   script,
   candidateName,
 }: {
-  hideDialog: () => void;
   script: string;
   candidateName?: string;
 }) {
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [started, setStarted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void synthesizeAudio(script)
-      .then((audio) => {
-        if (cancelled) {
-          return;
-        }
-        setAudioSrc(`data:${audio.contentType};base64,${audio.audioBase64}`);
-      })
-      .catch(async (error) => {
-        if (cancelled) {
-          return;
-        }
-        await showToast({
-          title: "Audio synthesis failed",
-          text: error instanceof Error ? error.message : "Unknown error",
-          variant: "error",
-        });
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+  const loadAudio = async () => {
+    setStarted(true);
+    setLoading(true);
+    setAudioSrc(null);
+    try {
+      const audio = await synthesizeAudio(script);
+      setAudioSrc(`data:${audio.contentType};base64,${audio.audioBase64}`);
+    } catch (error) {
+      await showToast({
+        title: "Audio synthesis failed",
+        text: error instanceof Error ? error.message : "Unknown error",
+        variant: "error",
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [script]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -58,15 +44,29 @@ export function SingleAudioDialog({
   }, [audioSrc, loading]);
 
   return (
-    <>
-      <Section title={candidateName ? `Audio — ${candidateName}` : "SLNG audio summary"}>
-        <TextBlock>{script}</TextBlock>
-      </Section>
-
+    <Section title={candidateName ? `Audio — ${candidateName}` : "SLNG audio summary"}>
+      <TextBlock>{script}</TextBlock>
+      {!started && (
+        <Button label="Play audio summary" onClick={() => void loadAudio()} />
+      )}
       {loading && <LoadingState />}
-
       {audioSrc && !loading && <audio ref={audioRef} controls src={audioSrc} />}
+    </Section>
+  );
+}
 
+export function SingleAudioDialog({
+  hideDialog,
+  script,
+  candidateName,
+}: {
+  hideDialog: () => void;
+  script: string;
+  candidateName?: string;
+}) {
+  return (
+    <>
+      <InlineAudioPlayer script={script} candidateName={candidateName} />
       <Button label="Close" onClick={hideDialog} />
     </>
   );

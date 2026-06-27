@@ -11,6 +11,8 @@ const CONNECTION_KEYS: Record<string, string> = {
   ENABLE_TAVILY: "enable_tavily",
   SLNG_API_KEY: "slng_api_key",
   ENABLE_SLNG: "enable_slng",
+  SLNG_TTS_MODEL: "slng_tts_model",
+  SLNG_TTS_VOICE: "slng_tts_voice",
 };
 
 const SETTINGS_KEYS: Record<string, keyof Awaited<ReturnType<typeof getWorkspaceSettings>>> = {
@@ -21,6 +23,8 @@ const SETTINGS_KEYS: Record<string, keyof Awaited<ReturnType<typeof getWorkspace
   GEMINI_MODEL: "gemini_model",
   TAVILY_API_KEY: "tavily_api_key",
   SLNG_API_KEY: "slng_api_key",
+  SLNG_TTS_MODEL: "slng_tts_model",
+  SLNG_TTS_VOICE: "slng_tts_voice",
 };
 
 let settingsPromise: ReturnType<typeof getWorkspaceSettings> | undefined;

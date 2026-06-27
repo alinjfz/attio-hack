@@ -25,5 +25,9 @@ export default async function synthesizeAudio(script: string): Promise<Synthesiz
     throw new Error("Missing slng_api_key in app settings.");
   }
 
-  return textToSpeech(trimmed, { apiKey: slngKey });
+  return textToSpeech(trimmed, {
+    apiKey: slngKey,
+    model: await readRuntimeEnv("SLNG_TTS_MODEL"),
+    voice: await readRuntimeEnv("SLNG_TTS_VOICE"),
+  });
 }

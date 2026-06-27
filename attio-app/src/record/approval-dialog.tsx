@@ -14,7 +14,7 @@ import {
   type WritebackOptions,
 } from "@recruiting-copilot/core/schemas/writeback-options";
 import applyWritebackServer from "../server/apply-writeback.server";
-import { openSingleAudioDialog } from "./audio-playlist-flow";
+import type { ApprovalResult } from "./research-flow";
 import { DraftTextBlock } from "./format-prose";
 import { TierBadge } from "./tier-badge";
 
@@ -25,7 +25,7 @@ export interface ApprovalDialogProps {
   fit: FitResult;
   bundle: DraftBundle;
   roleTitle?: string;
-  onApproved?: () => void;
+  onApproved?: (result?: ApprovalResult) => void;
   initialOptions?: Partial<WritebackOptions>;
   focus?: "review" | "rejection";
 }
@@ -125,15 +125,10 @@ export function ApprovalDialog({
       variant: "success",
     });
 
-    onApproved?.();
+    onApproved?.({
+      audioScript: result.audioSummary?.script,
+    });
     hideDialog();
-
-    if (result.audioSummary?.script) {
-      await openSingleAudioDialog({
-        script: result.audioSummary.script,
-        candidateName,
-      });
-    }
   };
 
   const handleApprove = async (values: {

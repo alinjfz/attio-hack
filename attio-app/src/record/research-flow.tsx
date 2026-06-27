@@ -2,16 +2,23 @@ import { showDialog } from "attio/client";
 import type { ResearchResult } from "@recruiting-copilot/core/schemas/draft-bundle";
 import type { WritebackOptions } from "@recruiting-copilot/core/schemas/writeback-options";
 import { ApprovalDialog } from "./approval-dialog";
+import { openSingleAudioDialog } from "./audio-playlist-flow";
+
+export interface ApprovalResult {
+  audioScript?: string;
+}
 
 export async function openApprovalDialog(options: {
   recordId: string;
   candidateName: string;
   result: ResearchResult;
   roleTitle?: string;
-  onApproved?: () => void;
+  onApproved?: (result?: ApprovalResult) => void;
   initialOptions?: Partial<WritebackOptions>;
   focus?: "review" | "rejection";
-}): Promise<void> {
+}): Promise<ApprovalResult | undefined> {
+  let approvalResult: ApprovalResult | undefined;
+
   await showDialog({
     title: options.focus === "rejection" ? "Draft rejection" : "Approve research bundle",
     Dialog: ({ hideDialog }) => (
@@ -22,10 +29,22 @@ export async function openApprovalDialog(options: {
         fit={options.result.fit}
         bundle={options.result.bundle}
         roleTitle={options.roleTitle}
-        onApproved={options.onApproved}
+        onApproved={(result) => {
+          approvalResult = result;
+          options.onApproved?.(result);
+        }}
         initialOptions={options.initialOptions}
         focus={options.focus}
       />
     ),
   });
+
+  if (approvalResult?.audioScript) {
+    await openSingleAudioDialog({
+      script: approvalResult.audioScript,
+      candidateName: options.candidateName,
+    });
+  }
+
+  return approvalResult;
 }

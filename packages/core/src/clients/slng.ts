@@ -1,6 +1,12 @@
+import { readEnv } from "../config/env.js";
+
 export interface SlngConfig {
   apiKey: string;
   endpoint?: string;
+  /** URL path model id, e.g. `slng/deepgram/aura:2-en` */
+  model?: string;
+  /** Voice id sent in the JSON body, e.g. `aura-2-thalia-en` */
+  voice?: string;
 }
 
 export interface TextToSpeechResult {
@@ -8,14 +14,21 @@ export interface TextToSpeechResult {
   contentType: string;
 }
 
-const DEFAULT_TTS_ENDPOINT = "https://api.slng.ai/v1/tts/slng/deepgram/aura:2";
-const DEFAULT_TTS_VOICE = "aura-2-thalia-en";
+/** SLNG-hosted Aura 2 English — deployed default (not `aura:2`, which returns 503). */
+export const DEFAULT_SLNG_TTS_MODEL = "slng/deepgram/aura:2-en";
+export const DEFAULT_SLNG_TTS_VOICE = "aura-2-thalia-en";
+
+export function buildSlngTtsEndpoint(modelId: string): string {
+  return `https://api.slng.ai/v1/tts/${modelId}`;
+}
 
 export async function textToSpeech(
   text: string,
   config: SlngConfig,
 ): Promise<TextToSpeechResult> {
-  const endpoint = config.endpoint ?? DEFAULT_TTS_ENDPOINT;
+  const model = config.model ?? readEnv("SLNG_TTS_MODEL") ?? DEFAULT_SLNG_TTS_MODEL;
+  const voice = config.voice ?? readEnv("SLNG_TTS_VOICE") ?? DEFAULT_SLNG_TTS_VOICE;
+  const endpoint = config.endpoint ?? readEnv("SLNG_TTS_ENDPOINT") ?? buildSlngTtsEndpoint(model);
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -25,7 +38,7 @@ export async function textToSpeech(
     },
     body: JSON.stringify({
       text,
-      model: DEFAULT_TTS_VOICE,
+      model: voice,
     }),
   });
 

@@ -42,12 +42,46 @@ export async function applyWriteback(
 ): Promise<ApplyWritebackResult> {
   const result: ApplyWritebackResult = {};
 
+  let audioScript: string | undefined;
+  if (input.options.createSlngSummary && deps.geminiClient) {
+    audioScript = await generateListSummaryScript(
+      [
+        {
+          name: input.candidateName,
+          fitScore: input.fit.score,
+          fitTier: input.fit.tier,
+          twoLiner: input.bundle.twoLiner,
+        },
+      ],
+      deps.geminiClient,
+      deps.geminiModel,
+    );
+  }
+
   if (input.mode === "approve") {
     await patchPerson(deps.attioConfig, input.recordId, {
       fitScore: input.fit.score,
       fitTier: input.fit.tier,
       twoLiner: input.bundle.twoLiner,
     });
+
+    if (audioScript) {
+      try {
+        await patchPerson(deps.attioConfig, input.recordId, {
+          audioSummaryScript: audioScript,
+        });
+      } catch {
+        // Optional field — run pnpm seed:attio if missing.
+      }
+    }
+  } else if (audioScript) {
+    try {
+      await patchPerson(deps.attioConfig, input.recordId, {
+        audioSummaryScript: audioScript,
+      });
+    } catch {
+      // Optional field — run pnpm seed:attio if missing.
+    }
   }
 
   if (input.options.createHmNote) {
@@ -88,38 +122,14 @@ export async function applyWriteback(
     });
   }
 
-  if (
-    input.options.createSlngSummary &&
-    deps.geminiClient
-  ) {
-    const script = await generateListSummaryScript(
-      [
-        {
-          name: input.candidateName,
-          fitScore: input.fit.score,
-          fitTier: input.fit.tier,
-          twoLiner: input.bundle.twoLiner,
-        },
-      ],
-      deps.geminiClient,
-      deps.geminiModel,
-    );
-
+  if (audioScript) {
     await createNote(deps.attioConfig, {
       recordId: input.recordId,
       title: "Audio summary script (SLNG)",
-      content: buildAudioSummaryNoteContent(script),
+      content: buildAudioSummaryNoteContent(audioScript),
     });
 
-    try {
-      await patchPerson(deps.attioConfig, input.recordId, {
-        audioSummaryScript: script,
-      });
-    } catch {
-      // Optional field — run pnpm seed:attio if missing.
-    }
-
-    result.audioSummary = { script };
+    result.audioSummary = { script: audioScript };
   }
 
   return result;

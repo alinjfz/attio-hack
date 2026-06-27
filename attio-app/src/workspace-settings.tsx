@@ -57,6 +57,16 @@ function Page() {
           description="Requires an SLNG API key."
         />
         <TextInput label="SLNG API key" name="slng_api_key" placeholder="slng-..." />
+        <TextInput
+          label="SLNG TTS model"
+          name="slng_tts_model"
+          placeholder="slng/deepgram/aura:2-en"
+        />
+        <TextInput
+          label="SLNG TTS voice"
+          name="slng_tts_voice"
+          placeholder="aura-2-thalia-en"
+        />
       </Section>
     </Form>
   );
