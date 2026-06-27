@@ -1,6 +1,6 @@
 # Partner integrations
 
-See the main [build plan](../recruiting_copilot_plan.md) for full setup details. Summary per sponsor:
+Per-sponsor setup for the Recruiting Copilot hackathon build. See also [README](../README.md) and [API reference](API.md).
 
 ## Attio
 
