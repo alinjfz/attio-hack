@@ -1,6 +1,110 @@
 export interface AttioRestConfig {
   apiToken: string;
   baseUrl?: string;
+  roleObjectSlug?: string;
+}
+
+export interface PersonContext {
+  recordId: string;
+  name: string;
+  cvText: string;
+  linkedinUrl?: string;
+  roleRecordId?: string;
+  roleDescription?: string;
+  roleTitle?: string;
+}
+
+type AttioValue = {
+  value?: string | number;
+  target_record_id?: string;
+  option?: string;
+};
+
+type AttioRecordResponse = {
+  data?: {
+    values?: Record<string, AttioValue[]>;
+  };
+};
+
+function getBaseUrl(config: AttioRestConfig): string {
+  return config.baseUrl ?? "https://api.attio.com/v2";
+}
+
+function getRoleObjectSlug(config: AttioRestConfig): string {
+  return config.roleObjectSlug ?? process.env.ATTIO_ROLE_OBJECT_SLUG ?? "roles";
+}
+
+export function extractTextValue(
+  values: Record<string, AttioValue[]> | undefined,
+  slug: string,
+): string | undefined {
+  const entry = values?.[slug]?.[0];
+  if (!entry) return undefined;
+  if (typeof entry.value === "string") return entry.value;
+  if (typeof entry.value === "number") return String(entry.value);
+  return undefined;
+}
+
+export function extractRecordReference(
+  values: Record<string, AttioValue[]> | undefined,
+  slug: string,
+): string | undefined {
+  return values?.[slug]?.[0]?.target_record_id;
+}
+
+export async function getRecord(
+  config: AttioRestConfig,
+  objectSlug: string,
+  recordId: string,
+): Promise<AttioRecordResponse> {
+  const response = await fetch(
+    `${getBaseUrl(config)}/objects/${objectSlug}/records/${recordId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${config.apiToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Attio GET ${objectSlug} failed: ${response.status} ${await response.text()}`);
+  }
+
+  return response.json() as Promise<AttioRecordResponse>;
+}
+
+export async function getPersonContext(
+  config: AttioRestConfig,
+  recordId: string,
+): Promise<PersonContext> {
+  const person = await getRecord(config, "people", recordId);
+  const values = person.data?.values;
+  const roleRecordId = extractRecordReference(values, "role");
+
+  let roleDescription: string | undefined;
+  let roleTitle: string | undefined;
+
+  if (roleRecordId) {
+    const role = await getRecord(config, getRoleObjectSlug(config), roleRecordId);
+    roleDescription = extractTextValue(role.data?.values, "description");
+    roleTitle = extractTextValue(role.data?.values, "title");
+  }
+
+  const name =
+    extractTextValue(values, "name") ??
+    extractTextValue(values, "full_name") ??
+    "Candidate";
+
+  return {
+    recordId,
+    name,
+    cvText: extractTextValue(values, "cv_text") ?? "",
+    linkedinUrl: extractTextValue(values, "linkedin_url"),
+    roleRecordId,
+    roleDescription,
+    roleTitle,
+  };
 }
 
 export interface PatchPersonValues {
@@ -14,10 +118,6 @@ export interface CreateNoteInput {
   recordId: string;
   title: string;
   content: string;
-}
-
-function getBaseUrl(config: AttioRestConfig): string {
-  return config.baseUrl ?? "https://api.attio.com/v2";
 }
 
 export function buildPatchPersonPayload(values: PatchPersonValues): {

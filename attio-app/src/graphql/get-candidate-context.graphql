@@ -1,0 +1,45 @@
+query GetCandidateContext($recordId: String!) {
+  person(id: $recordId) {
+    name {
+      full_name
+    }
+    cv_text: attribute(slug: "cv_text") {
+      __typename
+      ... on TextValue {
+        value
+      }
+    }
+    linkedin_url: attribute(slug: "linkedin_url") {
+      __typename
+      ... on TextValue {
+        value
+      }
+    }
+    role: attribute(slug: "role") {
+      __typename
+      ... on RecordReferenceValue {
+        target_record_id
+      }
+    }
+    fit_score: attribute(slug: "fit_score") {
+      __typename
+      ... on NumberValue {
+        value
+      }
+    }
+    fit_tier: attribute(slug: "fit_tier") {
+      __typename
+      ... on SelectValue {
+        option {
+          title
+        }
+      }
+    }
+    two_liner: attribute(slug: "two_liner") {
+      __typename
+      ... on TextValue {
+        value
+      }
+    }
+  }
+}

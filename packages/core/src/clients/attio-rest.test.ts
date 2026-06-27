@@ -3,6 +3,8 @@ import {
   buildCreateNotePayload,
   buildHmNoteContent,
   buildPatchPersonPayload,
+  extractRecordReference,
+  extractTextValue,
 } from "./attio-rest.js";
 
 describe("attio-rest payload builders", () => {
@@ -36,5 +38,15 @@ describe("attio-rest payload builders", () => {
     expect(content).toContain("Great fit.");
     expect(content).toContain("- TypeScript");
     expect(content).toContain("- No Attio");
+  });
+
+  it("extracts text and record reference values", () => {
+    const values = {
+      cv_text: [{ value: "Engineer CV" }],
+      role: [{ target_record_id: "role_123" }],
+    };
+
+    expect(extractTextValue(values, "cv_text")).toBe("Engineer CV");
+    expect(extractRecordReference(values, "role")).toBe("role_123");
   });
 });
