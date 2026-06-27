@@ -24,17 +24,17 @@ export function CombinedAudioDialog({
   return (
     <>
       <Section title={title}>
-        <TextBlock>
+        <TextBlock align="left">
           {preview.candidates.length} candidate{preview.candidates.length === 1 ? "" : "s"}
         </TextBlock>
       </Section>
 
       <Section title="Candidates">
-        <TextBlock>{roster}</TextBlock>
+        <TextBlock align="left">{roster}</TextBlock>
       </Section>
 
       <Section title="Transcript">
-        <TextBlock>{cleanTtsScript(preview.script)}</TextBlock>
+        <TextBlock align="left">{cleanTtsScript(preview.script)}</TextBlock>
       </Section>
 
       <PlayAudioSummaryButton

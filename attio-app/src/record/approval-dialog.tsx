@@ -16,8 +16,7 @@ import {
 import { formatGapAnalysisLines } from "@recruiting-copilot/core/utils/format-gap-analysis";
 import applyWritebackServer from "../server/apply-writeback.server";
 import type { ApprovalResult } from "./research-flow";
-import { formatBulletList, formatBulletSection } from "./format-bullets";
-import { DraftTextBlock } from "./format-prose";
+import { displayBlocks, displayBulletBlocks } from "./display-blocks";
 import { TierBadge } from "./tier-badge";
 
 export interface ApprovalDialogProps {
@@ -188,22 +187,21 @@ export function ApprovalDialog({
         {fit.score > 0 ? (
           <TierBadge tier={fit.tier} score={fit.score} />
         ) : (
-          <TextBlock>Rejection draft — fit score not required.</TextBlock>
+          <TextBlock align="left">Rejection draft — fit score not required.</TextBlock>
         )}
       </Section>
 
       {focus === "review" && (
         <>
           <Section title="Fit reasoning">
-            <TextBlock>
-              {formatBulletSection("Pros", bundle.fitReasoning?.pros ?? [])}
-              {"\n\n"}
-              {formatBulletSection("Cons", bundle.fitReasoning?.cons ?? [])}
-            </TextBlock>
+            <TextBlock align="left">Pros</TextBlock>
+            {displayBulletBlocks(bundle.fitReasoning?.pros ?? [], "pro")}
+            <TextBlock align="left">Cons</TextBlock>
+            {displayBulletBlocks(bundle.fitReasoning?.cons ?? [], "con")}
           </Section>
 
           <Section title="Gap analysis">
-            <TextBlock>{formatBulletList(gapLines, "No major gaps flagged.")}</TextBlock>
+            {displayBulletBlocks(gapLines, "gap", "No major gaps flagged.")}
           </Section>
         </>
       )}
@@ -221,16 +219,16 @@ export function ApprovalDialog({
       {focus === "review" && (
         <>
           <Section title="Client submittal draft">
-            <DraftTextBlock text={bundle.clientSubmittalDraft} />
+            {displayBlocks(bundle.clientSubmittalDraft, "submittal", "No submittal draft.")}
           </Section>
 
           <Section title="Candidate email draft">
-            <DraftTextBlock text={bundle.candidateEmailDraft} />
+            {displayBlocks(bundle.candidateEmailDraft, "candidate-email", "No candidate email draft.")}
           </Section>
 
           {webBullets.length > 0 && (
             <Section title="Web / LinkedIn bullets">
-              <TextBlock>{formatBulletList(webBullets)}</TextBlock>
+              {displayBulletBlocks(webBullets, "web")}
             </Section>
           )}
         </>

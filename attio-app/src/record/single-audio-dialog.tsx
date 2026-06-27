@@ -53,14 +53,14 @@ export function PlayAudioSummaryButton({
       {loading && <LoadingState />}
       {audio && (
         <Section title="Listen on your device">
-          <TextBlock>
+          <TextBlock align="left">
             Audio is hosted outside Attio. Use Open to play in your browser, or Download to
             save the file.
           </TextBlock>
-          <TextBlock>
+          <TextBlock align="left">
             <Link href={audio.url}>Open in browser</Link>
           </TextBlock>
-          <TextBlock>
+          <TextBlock align="left">
             <Link href={audio.downloadUrl}>Download audio file</Link>
           </TextBlock>
         </Section>

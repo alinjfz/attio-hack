@@ -1,8 +1,7 @@
 import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
 import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
 import { Section, TextBlock } from "attio/client";
-import { formatBulletSection } from "./format-bullets";
-import { DraftTextBlock } from "./format-prose";
+import { displayBlocks, displayBulletBlocks } from "./display-blocks";
 import { TierBadge } from "./tier-badge";
 
 export function BundlePreview({
@@ -16,17 +15,16 @@ export function BundlePreview({
     <>
       <Section title="Fit">
         <TierBadge tier={fit.tier} score={fit.score} />
-        <DraftTextBlock text={bundle.twoLiner || "No summary yet."} />
+        {displayBlocks(bundle.twoLiner || "No summary yet.", "two-liner")}
       </Section>
       <Section title="Pros / cons">
-        <TextBlock>
-          {formatBulletSection("Pros", bundle.fitReasoning.pros, "No pros listed.")}
-          {"\n\n"}
-          {formatBulletSection("Cons", bundle.fitReasoning.cons, "No cons listed.")}
-        </TextBlock>
+        <TextBlock align="left">Pros</TextBlock>
+        {displayBulletBlocks(bundle.fitReasoning.pros, "preview-pro", "No pros listed.")}
+        <TextBlock align="left">Cons</TextBlock>
+        {displayBulletBlocks(bundle.fitReasoning.cons, "preview-con", "No cons listed.")}
       </Section>
       <Section title="Submittal preview">
-        <DraftTextBlock text={bundle.clientSubmittalDraft || "No submittal draft."} />
+        {displayBlocks(bundle.clientSubmittalDraft || "No submittal draft.", "preview-submittal")}
       </Section>
     </>
   );
