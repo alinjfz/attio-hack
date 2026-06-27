@@ -9,6 +9,11 @@ export interface SlngConfig {
   voice?: string;
 }
 
+export interface TextToSpeechBufferResult {
+  buffer: ArrayBuffer;
+  contentType: string;
+}
+
 export interface TextToSpeechResult {
   audioBase64: string;
   contentType: string;
@@ -22,10 +27,10 @@ export function buildSlngTtsEndpoint(modelId: string): string {
   return `https://api.slng.ai/v1/tts/${modelId}`;
 }
 
-export async function textToSpeech(
+export async function textToSpeechBuffer(
   text: string,
   config: SlngConfig,
-): Promise<TextToSpeechResult> {
+): Promise<TextToSpeechBufferResult> {
   const model = config.model ?? readEnv("SLNG_TTS_MODEL") ?? DEFAULT_SLNG_TTS_MODEL;
   const voice = config.voice ?? readEnv("SLNG_TTS_VOICE") ?? DEFAULT_SLNG_TTS_VOICE;
   const endpoint = config.endpoint ?? readEnv("SLNG_TTS_ENDPOINT") ?? buildSlngTtsEndpoint(model);
@@ -46,10 +51,18 @@ export async function textToSpeech(
     throw new Error(`SLNG TTS failed: ${response.status} ${await response.text()}`);
   }
 
-  const buffer = await response.arrayBuffer();
-  const audioBase64 = arrayBufferToBase64(buffer);
-  const contentType = response.headers.get("content-type") ?? "audio/wav";
+  return {
+    buffer: await response.arrayBuffer(),
+    contentType: response.headers.get("content-type") ?? "audio/wav",
+  };
+}
 
+export async function textToSpeech(
+  text: string,
+  config: SlngConfig,
+): Promise<TextToSpeechResult> {
+  const { buffer, contentType } = await textToSpeechBuffer(text, config);
+  const audioBase64 = arrayBufferToBase64(buffer);
   return { audioBase64, contentType };
 }
 

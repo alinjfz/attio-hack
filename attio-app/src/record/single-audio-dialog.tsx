@@ -1,51 +1,38 @@
-import { Button, LoadingState, showToast } from "attio/client";
-import { splitScriptForTts } from "@recruiting-copilot/core/utils/split-tts-script";
-import { useEffect, useRef, useState } from "react";
-import synthesizeAudio from "../server/synthesize-audio.server";
+import { Button, Link, LoadingState, Section, TextBlock, showToast } from "attio/client";
+import { useState } from "react";
+import type { HostedAudioPart } from "../server/host-audio.server";
+import hostAudioForScript from "../server/host-audio.server";
 
 export function PlayAudioSummaryButton({
   script,
-  label = "Play audio summary",
+  label = "Generate audio summary",
 }: {
   script: string;
   label?: string;
 }) {
-  const chunks = splitScriptForTts(script);
-  const [audioSrcs, setAudioSrcs] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [parts, setParts] = useState<HostedAudioPart[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handlePlay = async () => {
-    if (audioSrcs.length > 0 && audioRef.current) {
-      void audioRef.current.play().catch(() => {
-        // Playback may require a fresh user gesture.
-      });
-      return;
-    }
-
-    if (chunks.length === 0) {
-      await showToast({
-        title: "No audio script",
-        text: "Nothing to synthesize.",
-        variant: "error",
-      });
+  const handleGenerate = async () => {
+    if (parts.length > 0) {
       return;
     }
 
     setLoading(true);
-    setAudioSrcs([]);
-    setCurrentIndex(0);
+    setLoadingLabel("Generating audio…");
 
     try {
-      const srcs: string[] = [];
-      for (let index = 0; index < chunks.length; index++) {
-        setLoadingLabel(`Generating part ${index + 1} of ${chunks.length}…`);
-        const audio = await synthesizeAudio(chunks[index]!);
-        srcs.push(`data:${audio.contentType};base64,${audio.audioBase64}`);
-      }
-      setAudioSrcs(srcs);
+      const hosted = await hostAudioForScript(script);
+      setParts(hosted);
+      await showToast({
+        title: "Audio ready",
+        text:
+          hosted.length === 1
+            ? "Open or download the link below to listen on your device."
+            : `${hosted.length} parts — open each link in order.`,
+        variant: "success",
+      });
     } catch (error) {
       await showToast({
         title: "Audio synthesis failed",
@@ -58,47 +45,35 @@ export function PlayAudioSummaryButton({
     }
   };
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    const src = audioSrcs[currentIndex];
-    if (!audio || !src || loading) {
-      return;
-    }
-
-    audio.load();
-    void audio.play().catch(() => {
-      // Autoplay may be blocked until the user interacts.
-    });
-  }, [audioSrcs, currentIndex, loading]);
-
-  const handleEnded = () => {
-    if (currentIndex < audioSrcs.length - 1) {
-      setCurrentIndex((value) => value + 1);
-    }
-  };
-
-  const buttonLabel = loading
-    ? loadingLabel || "Generating audio…"
-    : audioSrcs.length > 1 && currentIndex < audioSrcs.length - 1
-      ? `Playing part ${currentIndex + 1} of ${audioSrcs.length}`
-      : label;
-
   return (
     <>
       <Button
-        label={buttonLabel}
+        label={loading ? loadingLabel || "Generating audio…" : label}
         icon="Play"
-        onClick={() => void handlePlay()}
+        onClick={() => void handleGenerate()}
         disabled={loading}
       />
       {loading && <LoadingState />}
-      {audioSrcs[currentIndex] && !loading && (
-        <audio
-          ref={audioRef}
-          controls
-          src={audioSrcs[currentIndex]}
-          onEnded={handleEnded}
-        />
+      {parts.length > 0 && (
+        <Section title="Listen on your device">
+          <TextBlock>
+            Audio is hosted outside Attio. Use Open to play in your browser, or Download to
+            save the file.
+          </TextBlock>
+          {parts.map((part) => (
+            <Section
+              key={`${part.part}-${part.url}`}
+              title={part.total > 1 ? `Part ${part.part} of ${part.total}` : "Audio clip"}
+            >
+            <TextBlock>
+              <Link href={part.url}>Open in browser</Link>
+            </TextBlock>
+            <TextBlock>
+              <Link href={part.downloadUrl}>Download audio file</Link>
+            </TextBlock>
+            </Section>
+          ))}
+        </Section>
       )}
     </>
   );

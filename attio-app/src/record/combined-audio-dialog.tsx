@@ -39,7 +39,7 @@ export function CombinedAudioDialog({
 
       <PlayAudioSummaryButton
         script={cleanTtsScript(preview.script)}
-        label="Play combined audio"
+        label="Generate combined audio"
       />
       <Button label="Close" icon="Cross" onClick={hideDialog} />
     </>

@@ -43,7 +43,7 @@ function Page() {
 
       <Section
         title="Optional integrations"
-        description="Tavily adds web research bullets. SLNG enables the audio list summary widget."
+        description="Tavily adds web research bullets. SLNG enables audio summaries. Audio files are hosted via your public API URL (ngrok)."
       >
         <Toggle
           label="Enable Tavily web research"
@@ -66,6 +66,16 @@ function Page() {
           label="SLNG TTS voice"
           name="slng_tts_voice"
           placeholder="aura-2-thalia-en"
+        />
+        <TextInput
+          label="API public URL (for audio hosting)"
+          name="api_public_url"
+          placeholder="https://xxxx.ngrok-free.app"
+        />
+        <TextInput
+          label="Webhook secret"
+          name="webhook_secret"
+          placeholder="same as WEBHOOK_SECRET in .env"
         />
       </Section>
     </Form>

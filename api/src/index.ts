@@ -12,7 +12,11 @@ import {
   buildHmNoteContent,
   runResearch,
   ResearchResultSchema,
+  textToSpeechBuffer,
+  DEFAULT_SLNG_TTS_MODEL,
+  DEFAULT_SLNG_TTS_VOICE,
 } from "@recruiting-copilot/core";
+import { storeAudio, getAudio } from "./tts-cache.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, "../../.env") });
@@ -22,6 +26,77 @@ const app = new Hono();
 app.get("/health", (c) =>
   c.json({ ok: true, service: "recruiting-copilot-api", version: "0.0.1" }),
 );
+
+function publicBaseUrl(): string {
+  return (process.env.API_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3001}`).replace(
+    /\/$/,
+    "",
+  );
+}
+
+function requireWebhookSecret(c: { req: { header: (name: string) => string | undefined } }): boolean {
+  const secret = c.req.header("X-Webhook-Secret");
+  return Boolean(process.env.WEBHOOK_SECRET && secret === process.env.WEBHOOK_SECRET);
+}
+
+app.post("/tts", async (c) => {
+  if (!requireWebhookSecret(c)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const body = await c.req.json<{ text?: string }>();
+  const text = body.text?.trim();
+  if (!text) {
+    return c.json({ error: "text is required" }, 400);
+  }
+
+  const slngKey = process.env.SLNG_API_KEY;
+  if (!slngKey) {
+    return c.json({ error: "Missing SLNG_API_KEY on api server" }, 500);
+  }
+
+  try {
+    const audio = await textToSpeechBuffer(text, {
+      apiKey: slngKey,
+      model: process.env.SLNG_TTS_MODEL ?? DEFAULT_SLNG_TTS_MODEL,
+      voice: process.env.SLNG_TTS_VOICE ?? DEFAULT_SLNG_TTS_VOICE,
+    });
+    const id = storeAudio(audio.buffer, audio.contentType);
+    const base = publicBaseUrl();
+    return c.json({
+      id,
+      url: `${base}/tts/${id}`,
+      downloadUrl: `${base}/tts/${id}?download=1`,
+      contentType: audio.contentType,
+    });
+  } catch (error) {
+    return c.json(
+      { error: error instanceof Error ? error.message : "TTS synthesis failed" },
+      502,
+    );
+  }
+});
+
+app.get("/tts/:id", (c) => {
+  const id = c.req.param("id");
+  const entry = getAudio(id);
+  if (!entry) {
+    return c.json({ error: "Audio not found or expired" }, 404);
+  }
+
+  const download = c.req.query("download") === "1";
+  const headers: Record<string, string> = {
+    "Content-Type": entry.contentType,
+    "Cache-Control": "private, max-age=3600",
+  };
+  if (download) {
+    headers["Content-Disposition"] = `attachment; filename="slng-summary-${id}.wav"`;
+  } else {
+    headers["Content-Disposition"] = `inline; filename="slng-summary-${id}.wav"`;
+  }
+
+  return new Response(entry.buffer, { headers });
+});
 
 app.post("/webhook/research", async (c) => {
   const secret = c.req.header("X-Webhook-Secret");

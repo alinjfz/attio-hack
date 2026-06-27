@@ -13,6 +13,8 @@ const appSettingsSchema = {
     slng_api_key: Settings.string(),
     slng_tts_model: Settings.string(),
     slng_tts_voice: Settings.string(),
+    api_public_url: Settings.string(),
+    webhook_secret: Settings.string(),
   },
 } satisfies SettingsSchema;
 

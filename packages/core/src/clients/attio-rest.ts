@@ -565,6 +565,6 @@ export function buildAudioSummaryNoteContent(script: string): string {
   return formatDraftForNote(
     "SLNG audio summary",
     script,
-    "Tap **Play audio summary** in **Recruiting Copilot** on this person to hear it.",
+    "Tap **Generate audio summary** in **Recruiting Copilot** on this person, then open the link in your browser.",
   );
 }

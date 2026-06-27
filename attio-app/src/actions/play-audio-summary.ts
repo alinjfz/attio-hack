@@ -5,7 +5,7 @@ import personCombinedAudio from "../server/person-combined-audio.server";
 
 export const playAudioSummaryAction: App.Record.Action = {
   id: "play-audio-summary",
-  label: "Play audio summary",
+  label: "Generate audio summary",
   icon: "Play",
   objects: ["people"],
   onTrigger: async ({ recordId }) => {

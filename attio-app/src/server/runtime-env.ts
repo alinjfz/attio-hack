@@ -13,6 +13,8 @@ const CONNECTION_KEYS: Record<string, string> = {
   ENABLE_SLNG: "enable_slng",
   SLNG_TTS_MODEL: "slng_tts_model",
   SLNG_TTS_VOICE: "slng_tts_voice",
+  API_PUBLIC_URL: "api_public_url",
+  WEBHOOK_SECRET: "webhook_secret",
 };
 
 const SETTINGS_KEYS: Record<string, keyof Awaited<ReturnType<typeof getWorkspaceSettings>>> = {
@@ -25,6 +27,8 @@ const SETTINGS_KEYS: Record<string, keyof Awaited<ReturnType<typeof getWorkspace
   SLNG_API_KEY: "slng_api_key",
   SLNG_TTS_MODEL: "slng_tts_model",
   SLNG_TTS_VOICE: "slng_tts_voice",
+  API_PUBLIC_URL: "api_public_url",
+  WEBHOOK_SECRET: "webhook_secret",
 };
 
 let settingsPromise: ReturnType<typeof getWorkspaceSettings> | undefined;
