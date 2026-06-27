@@ -2,17 +2,17 @@ import { ATTIO_API_TOKEN } from "attio/server";
 import { getPersonAudioSummary } from "@recruiting-copilot/core/attio";
 import {
   summarizeCandidatesFromRecordIds,
-  type AudioSegmentPreview,
+  type CombinedAudioPreview,
 } from "@recruiting-copilot/core/pipeline/batch-summarize-audio";
 import { loadAudioDeps } from "./load-audio-deps.server";
 
-export type { AudioSegmentPreview };
+export type { CombinedAudioPreview };
 
 const MAX_CANDIDATES = 10;
 
 export default async function batchSummarizeAudioForRecords(
   recordIds: string[],
-): Promise<AudioSegmentPreview[]> {
+): Promise<CombinedAudioPreview> {
   if (recordIds.length === 0) {
     throw new Error("Select at least one candidate.");
   }

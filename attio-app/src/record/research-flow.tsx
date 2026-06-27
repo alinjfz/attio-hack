@@ -2,7 +2,6 @@ import { showDialog } from "attio/client";
 import type { ResearchResult } from "@recruiting-copilot/core/schemas/draft-bundle";
 import type { WritebackOptions } from "@recruiting-copilot/core/schemas/writeback-options";
 import { ApprovalDialog } from "./approval-dialog";
-import { openSingleAudioDialog } from "./audio-playlist-flow";
 
 export interface ApprovalResult {
   audioScript?: string;
@@ -38,13 +37,6 @@ export async function openApprovalDialog(options: {
       />
     ),
   });
-
-  if (approvalResult?.audioScript) {
-    await openSingleAudioDialog({
-      script: approvalResult.audioScript,
-      candidateName: options.candidateName,
-    });
-  }
 
   return approvalResult;
 }

@@ -6,6 +6,7 @@ import {
   buildRejectionEmailNoteContent,
   buildSilverMedalistNoteContent,
   extractRecordReference,
+  extractSelectOption,
   extractTextValue,
   resolveFitTierOptionTitle,
 } from "./attio-rest.js";
@@ -68,6 +69,14 @@ describe("attio-rest payload builders", () => {
 
     expect(extractTextValue(values, "cv_text")).toBe("Engineer CV");
     expect(extractRecordReference(values, "role")).toBe("role_123");
+  });
+
+  it("extracts select option title from object values", () => {
+    const values = {
+      fit_tier: [{ option: { title: "Strong", id: "opt_1" } }],
+    };
+
+    expect(extractSelectOption(values, "fit_tier")).toBe("Strong");
   });
 
   it("resolveFitTierOptionTitle matches case-insensitively", () => {

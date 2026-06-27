@@ -13,15 +13,23 @@ const ListScriptSchema = z.object({
   script: z.string(),
 });
 
+const SPOKEN_NAME_RULES = [
+  "Always refer to each candidate by their name — repeat the name naturally.",
+  "Never use he, she, they, him, her, them, or their.",
+  "No filler openings (never start with 'Reviewing ... profile reveals' or similar).",
+  "Start directly with a candidate name and fit score or highlight.",
+].join(" ");
+
 export async function generateListSummaryScript(
   candidates: ListCandidateSummary[],
   client: GeminiClientLike,
   model?: string,
 ): Promise<string> {
   const prompt = [
-    "Write a spoken 45-second recruiting summary for a busy recruiter.",
-    "Cover the top candidates, their fit scores, and one highlight each.",
+    "Write a spoken recruiting summary for a busy recruiter.",
+    "Cover every candidate below, their fit scores, and one highlight each.",
     "Partnership-first tone. Do not imply any message was sent.",
+    SPOKEN_NAME_RULES,
     "",
     "Candidates:",
     ...candidates.map(
@@ -53,6 +61,7 @@ export async function generateCandidateReadAloudScript(
   const prompt = [
     "Write a spoken 15-second recruiting read-aloud for one candidate.",
     "Partnership-first tone. Do not imply any message was sent.",
+    SPOKEN_NAME_RULES,
     `This is candidate ${position} of ${total} in a batch review.`,
     "",
     `Name: ${candidate.name}`,

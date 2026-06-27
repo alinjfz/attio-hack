@@ -1,24 +1,24 @@
 import type { App } from "attio";
-import { Button, Section, Typography, showToast } from "attio/client";
-import { useState } from "react";
+import { Button, LoadingState, Section, Typography, showToast } from "attio/client";
+import { Suspense, useState } from "react";
 import summarizeRecruitingListAudio from "../server/summarize-recruiting-list-audio.server";
-import { openAudioPlaylistDialog } from "./audio-playlist-flow";
+import { openCombinedAudioDialog } from "./audio-playlist-flow";
+import { PersonAudioSummary } from "./person-audio-summary";
 
 function AudioSummaryPanel({ recordId }: { recordId: string }) {
-  void recordId;
   const [loading, setLoading] = useState(false);
 
   const handleListenToList = async () => {
     setLoading(true);
     try {
-      const segments = await summarizeRecruitingListAudio();
-      await openAudioPlaylistDialog({
+      const preview = await summarizeRecruitingListAudio();
+      await openCombinedAudioDialog({
         title: "Recruiting list audio",
-        segments,
+        preview,
       });
       await showToast({
-        title: "Scripts ready",
-        text: `${segments.length} candidates — audio loads one by one, highest fit first.`,
+        title: "Script ready",
+        text: `${preview.candidates.length} candidates in one combined transcript.`,
         variant: "success",
       });
     } catch (error) {
@@ -33,18 +33,25 @@ function AudioSummaryPanel({ recordId }: { recordId: string }) {
   };
 
   return (
-    <Section title="List audio summary (SLNG)">
-      <Typography.Body>
-        Prepare spoken summaries for every researched candidate on the recruiting list.
-        Audio is generated one candidate at a time to keep responses fast. Requires
-        enable_slng and slng_api_key in app settings.
-      </Typography.Body>
-      <Button
-        label={loading ? "Preparing scripts…" : "Listen to recruiting list"}
-        onClick={handleListenToList}
-        disabled={loading}
-      />
-    </Section>
+    <>
+      <Section title="This candidate">
+        <Suspense fallback={<LoadingState />}>
+          <PersonAudioSummary recordId={recordId} />
+        </Suspense>
+      </Section>
+
+      <Section title="Recruiting list">
+        <Typography.Body>
+          Generate one combined spoken summary for every researched candidate on the
+          recruiting list.
+        </Typography.Body>
+        <Button
+          label={loading ? "Preparing combined script…" : "Listen to recruiting list"}
+          onClick={handleListenToList}
+          disabled={loading}
+        />
+      </Section>
+    </>
   );
 }
 

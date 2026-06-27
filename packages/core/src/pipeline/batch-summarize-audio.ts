@@ -1,8 +1,9 @@
 import type { GeminiClientLike } from "../clients/gemini.js";
 import {
-  generateCandidateReadAloudScript,
+  generateListSummaryScript,
   type ListCandidateSummary,
 } from "./summarize-list.js";
+import { cleanTtsScript } from "../utils/split-tts-script.js";
 
 export interface BatchCandidateSummary extends ListCandidateSummary {
   recordId?: string;
@@ -17,6 +18,11 @@ export interface AudioSegmentPreview {
   script: string;
 }
 
+export interface CombinedAudioPreview {
+  script: string;
+  candidates: BatchCandidateSummary[];
+}
+
 export interface AudioSegment extends AudioSegmentPreview {
   audioBase64: string;
   contentType: string;
@@ -27,33 +33,19 @@ export interface BatchScriptDeps {
   geminiModel?: string;
 }
 
-export async function batchGenerateAudioScripts(
+export async function batchGenerateCombinedAudioScript(
   candidates: BatchCandidateSummary[],
   deps: BatchScriptDeps,
-): Promise<AudioSegmentPreview[]> {
+): Promise<CombinedAudioPreview> {
   const sorted = [...candidates].sort((a, b) => b.fitScore - a.fitScore);
-  const segments: AudioSegmentPreview[] = [];
+  const script = cleanTtsScript(
+    await generateListSummaryScript(sorted, deps.geminiClient, deps.geminiModel),
+  );
 
-  for (let index = 0; index < sorted.length; index++) {
-    const candidate = sorted[index]!;
-    const script = await generateCandidateReadAloudScript(
-      candidate,
-      index + 1,
-      sorted.length,
-      deps.geminiClient,
-      deps.geminiModel,
-    );
-
-    segments.push({
-      recordId: candidate.recordId,
-      name: candidate.name,
-      fitScore: candidate.fitScore,
-      fitTier: candidate.fitTier,
-      script,
-    });
-  }
-
-  return segments;
+  return {
+    script,
+    candidates: sorted,
+  };
 }
 
 export async function summarizeCandidatesFromRecordIds(
@@ -62,7 +54,7 @@ export async function summarizeCandidatesFromRecordIds(
     fetchSummary: (recordId: string) => Promise<BatchCandidateSummary | null>;
     maxCandidates?: number;
   },
-): Promise<AudioSegmentPreview[]> {
+): Promise<CombinedAudioPreview> {
   const uniqueIds = [...new Set(recordIds)].slice(0, deps.maxCandidates ?? 10);
   const candidates: BatchCandidateSummary[] = [];
 
@@ -79,5 +71,5 @@ export async function summarizeCandidatesFromRecordIds(
     );
   }
 
-  return batchGenerateAudioScripts(candidates, deps);
+  return batchGenerateCombinedAudioScript(candidates, deps);
 }

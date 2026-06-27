@@ -1,19 +1,18 @@
 import type { App } from "attio";
 import { alert, showToast } from "attio/client";
-import previewCandidateAudio from "../server/preview-candidate-audio.server";
-import { openAudioPlaylistDialog } from "../record/audio-playlist-flow";
+import batchSummarizeAudioForRecords from "../server/batch-summarize-audio.server";
+import { openCombinedAudioDialog } from "../record/audio-playlist-flow";
 
 const MAX_BULK = 10;
 
 export const bulkAudioSummaryAction: App.Record.BulkAction = {
   id: "bulk-audio-summary",
   label: "Listen to candidates (SLNG)",
-  icon: "Search",
+  icon: "SummarizeRecord",
   objects: ["people"],
   onTrigger: async ({ runRecordBatches }) => {
-    let processed = 0;
+    const recordIds: string[] = [];
     let limitAlerted = false;
-    const segments: Awaited<ReturnType<typeof previewCandidateAudio>>[] = [];
 
     const outcome = await runRecordBatches(
       {
@@ -23,21 +22,21 @@ export const bulkAudioSummaryAction: App.Record.BulkAction = {
             limitAlerted = true;
             void alert({
               title: `Max ${MAX_BULK} per run`,
-              text: `You selected ${totalRecords} candidates. Only the first ${MAX_BULK} will be read aloud.`,
+              text: `You selected ${totalRecords} candidates. Only the first ${MAX_BULK} will be included.`,
             });
           }
           return {
             title: "SLNG batch audio",
-            text: `Preparing up to ${Math.min(totalRecords, MAX_BULK)} scripts…`,
+            text: `Preparing up to ${Math.min(totalRecords, MAX_BULK)} candidates…`,
           };
         },
         onProgress: ({ processedRecords, totalRecords }) => ({
           title: "SLNG batch audio",
-          text: `Prepared ${processedRecords}/${Math.min(totalRecords, MAX_BULK)} scripts…`,
+          text: `Collected ${processedRecords}/${Math.min(totalRecords, MAX_BULK)} candidates…`,
         }),
         onComplete: () => ({
-          title: "Scripts ready",
-          text: "Opening playlist — audio loads one candidate at a time.",
+          title: "Script ready",
+          text: "Opening combined transcript and audio.",
           variant: "success",
         }),
         onError: (_context, error) => ({
@@ -47,40 +46,23 @@ export const bulkAudioSummaryAction: App.Record.BulkAction = {
         }),
       },
       async (batch) => {
-        if (processed >= MAX_BULK) {
-          return null;
-        }
-
         const recordId = batch.recordIds[0];
-        if (!recordId) {
+        if (!recordId || recordIds.length >= MAX_BULK) {
           return null;
         }
-        if (segments.some((segment) => segment.recordId === recordId)) {
+        if (recordIds.includes(recordId)) {
           return null;
         }
-
-        processed += 1;
-
-        try {
-          const segment = await previewCandidateAudio(recordId);
-          segments.push(segment);
-          return segment;
-        } catch (error) {
-          await showToast({
-            title: "Skipped candidate",
-            text: error instanceof Error ? error.message : "Unknown error",
-            variant: "error",
-          });
-          return null;
-        }
+        recordIds.push(recordId);
+        return recordId;
       },
     );
 
-    if (segments.length === 0) {
+    if (recordIds.length === 0) {
       const message =
         !outcome.success && outcome.error instanceof Error
           ? outcome.error.message
-          : "No candidate scripts were generated. Research candidates first.";
+          : "No candidates selected.";
       await showToast({
         title: "Batch audio failed",
         text: message,
@@ -89,11 +71,18 @@ export const bulkAudioSummaryAction: App.Record.BulkAction = {
       return;
     }
 
-    segments.sort((a, b) => b.fitScore - a.fitScore);
-
-    await openAudioPlaylistDialog({
-      title: "Candidate audio playlist",
-      segments,
-    });
+    try {
+      const preview = await batchSummarizeAudioForRecords(recordIds);
+      await openCombinedAudioDialog({
+        title: "Candidate audio summary",
+        preview,
+      });
+    } catch (error) {
+      await showToast({
+        title: "Batch audio failed",
+        text: error instanceof Error ? error.message : "Unknown error",
+        variant: "error",
+      });
+    }
   },
 };

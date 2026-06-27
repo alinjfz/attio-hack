@@ -20,7 +20,8 @@
     "./pipeline/batch-summarize-audio": "./src/pipeline/batch-summarize-audio.ts",
     "./pipeline/summarize-list": "./src/pipeline/summarize-list.ts",
     "./schemas/writeback-options": "./src/schemas/writeback-options.ts",
-    "./utils/format-prose": "./src/utils/format-prose.ts"
+    "./utils/format-prose": "./src/utils/format-prose.ts",
+    "./utils/split-tts-script": "./src/utils/split-tts-script.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

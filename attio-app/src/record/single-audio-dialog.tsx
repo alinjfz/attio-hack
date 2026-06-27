@@ -1,26 +1,51 @@
-import { Button, LoadingState, Section, TextBlock, showToast } from "attio/client";
+import { Button, LoadingState, showToast } from "attio/client";
+import { splitScriptForTts } from "@recruiting-copilot/core/utils/split-tts-script";
 import { useEffect, useRef, useState } from "react";
 import synthesizeAudio from "../server/synthesize-audio.server";
 
-export function InlineAudioPlayer({
+export function PlayAudioSummaryButton({
   script,
-  candidateName,
+  label = "Play audio summary",
 }: {
   script: string;
-  candidateName?: string;
+  label?: string;
 }) {
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const chunks = splitScriptForTts(script);
+  const [audioSrcs, setAudioSrcs] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [started, setStarted] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const loadAudio = async () => {
-    setStarted(true);
+  const handlePlay = async () => {
+    if (audioSrcs.length > 0 && audioRef.current) {
+      void audioRef.current.play().catch(() => {
+        // Playback may require a fresh user gesture.
+      });
+      return;
+    }
+
+    if (chunks.length === 0) {
+      await showToast({
+        title: "No audio script",
+        text: "Nothing to synthesize.",
+        variant: "error",
+      });
+      return;
+    }
+
     setLoading(true);
-    setAudioSrc(null);
+    setAudioSrcs([]);
+    setCurrentIndex(0);
+
     try {
-      const audio = await synthesizeAudio(script);
-      setAudioSrc(`data:${audio.contentType};base64,${audio.audioBase64}`);
+      const srcs: string[] = [];
+      for (let index = 0; index < chunks.length; index++) {
+        setLoadingLabel(`Generating part ${index + 1} of ${chunks.length}…`);
+        const audio = await synthesizeAudio(chunks[index]!);
+        srcs.push(`data:${audio.contentType};base64,${audio.audioBase64}`);
+      }
+      setAudioSrcs(srcs);
     } catch (error) {
       await showToast({
         title: "Audio synthesis failed",
@@ -29,45 +54,52 @@ export function InlineAudioPlayer({
       });
     } finally {
       setLoading(false);
+      setLoadingLabel("");
     }
   };
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !audioSrc || loading) {
+    const src = audioSrcs[currentIndex];
+    if (!audio || !src || loading) {
       return;
     }
+
     audio.load();
     void audio.play().catch(() => {
       // Autoplay may be blocked until the user interacts.
     });
-  }, [audioSrc, loading]);
+  }, [audioSrcs, currentIndex, loading]);
 
-  return (
-    <Section title={candidateName ? `Audio — ${candidateName}` : "SLNG audio summary"}>
-      <TextBlock>{script}</TextBlock>
-      {!started && (
-        <Button label="Play audio summary" onClick={() => void loadAudio()} />
-      )}
-      {loading && <LoadingState />}
-      {audioSrc && !loading && <audio ref={audioRef} controls src={audioSrc} />}
-    </Section>
-  );
-}
+  const handleEnded = () => {
+    if (currentIndex < audioSrcs.length - 1) {
+      setCurrentIndex((value) => value + 1);
+    }
+  };
 
-export function SingleAudioDialog({
-  hideDialog,
-  script,
-  candidateName,
-}: {
-  hideDialog: () => void;
-  script: string;
-  candidateName?: string;
-}) {
+  const buttonLabel = loading
+    ? loadingLabel || "Generating audio…"
+    : audioSrcs.length > 1 && currentIndex < audioSrcs.length - 1
+      ? `Playing part ${currentIndex + 1} of ${audioSrcs.length}`
+      : label;
+
   return (
     <>
-      <InlineAudioPlayer script={script} candidateName={candidateName} />
-      <Button label="Close" onClick={hideDialog} />
+      <Button
+        label={buttonLabel}
+        icon="Play"
+        onClick={() => void handlePlay()}
+        disabled={loading}
+      />
+      {loading && <LoadingState />}
+      {audioSrcs[currentIndex] && !loading && (
+        <audio
+          ref={audioRef}
+          controls
+          src={audioSrcs[currentIndex]}
+          onEnded={handleEnded}
+        />
+      )}
     </>
   );
 }

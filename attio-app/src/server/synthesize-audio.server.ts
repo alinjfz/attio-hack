@@ -1,5 +1,6 @@
 import { textToSpeech } from "@recruiting-copilot/core/clients/slng";
 import { isSlngEnabled } from "@recruiting-copilot/core/config/features";
+import { TTS_CHUNK_MAX_CHARS } from "@recruiting-copilot/core/utils/split-tts-script";
 import { readRuntimeEnv, readRuntimeEnvFlag } from "./runtime-env";
 
 export interface SynthesizeAudioResult {
@@ -11,6 +12,12 @@ export default async function synthesizeAudio(script: string): Promise<Synthesiz
   const trimmed = script.trim();
   if (!trimmed) {
     throw new Error("Cannot synthesize empty audio script.");
+  }
+
+  if (trimmed.length > TTS_CHUNK_MAX_CHARS) {
+    throw new Error(
+      `Script too long for one audio request (${trimmed.length} chars). Play uses chunked synthesis automatically.`,
+    );
   }
 
   const slngEnabled = await readRuntimeEnvFlag("ENABLE_SLNG");

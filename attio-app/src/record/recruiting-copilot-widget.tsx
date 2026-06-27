@@ -3,6 +3,7 @@ import {
   Button,
   Forms,
   LoadingState,
+  Section,
   Widget,
   showToast,
   useForm,
@@ -17,7 +18,7 @@ import saveCvText from "../server/save-cv-text.server";
 import researchCandidate from "../server/research-candidate.server";
 import { BundlePreview } from "./bundle-preview";
 import draftRejection from "../server/draft-rejection.server";
-import { InlineAudioPlayer } from "./single-audio-dialog";
+import { PersonAudioSummary } from "./person-audio-summary";
 import { openApprovalDialog } from "./research-flow";
 import { TierBadge } from "./tier-badge";
 
@@ -83,8 +84,6 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
   const fitScore = readNumber(person?.fit_score);
   const fitTier = readTier(person?.fit_tier);
   const twoLiner = readText(person?.two_liner);
-  const audioSummaryScript = readText(person?.audio_summary_script);
-  const playableScript = savedAudioScript ?? audioSummaryScript;
   const roleContext = readRoleContext(person?.role);
   const hasRole = !!roleContext.roleRecordId;
 
@@ -228,9 +227,9 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         disabled={researching || draftingRejection}
       />
 
-      {playableScript && (
-        <InlineAudioPlayer script={playableScript} candidateName={candidateName} />
-      )}
+      <Section title="Listen to summary">
+        <PersonAudioSummary recordId={recordId} savedScript={savedAudioScript} />
+      </Section>
 
       {preview && <BundlePreview fit={preview.fit} bundle={preview.bundle} />}
     </>

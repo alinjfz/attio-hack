@@ -120,7 +120,7 @@ export function ApprovalDialog({
     await showToast({
       title: successTitle,
       text: result.audioSummary
-        ? `${successText} Opening audio player…`
+        ? `${successText} Use Play audio summary on this person to listen.`
         : successText,
       variant: "success",
     });

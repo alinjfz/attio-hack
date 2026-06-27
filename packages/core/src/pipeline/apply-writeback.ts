@@ -11,7 +11,8 @@ import type { GeminiClientLike } from "../clients/gemini.js";
 import type { DraftBundle } from "../schemas/draft-bundle.js";
 import type { FitResult } from "../schemas/fit-result.js";
 import type { WritebackMode, WritebackOptions } from "../schemas/writeback-options.js";
-import { generateListSummaryScript } from "./summarize-list.js";
+import { generateCandidateReadAloudScript } from "./summarize-list.js";
+import { cleanTtsScript } from "../utils/split-tts-script.js";
 
 export interface ApplyWritebackInput {
   recordId: string;
@@ -44,17 +45,19 @@ export async function applyWriteback(
 
   let audioScript: string | undefined;
   if (input.options.createSlngSummary && deps.geminiClient) {
-    audioScript = await generateListSummaryScript(
-      [
+    audioScript = cleanTtsScript(
+      await generateCandidateReadAloudScript(
         {
           name: input.candidateName,
           fitScore: input.fit.score,
           fitTier: input.fit.tier,
           twoLiner: input.bundle.twoLiner,
         },
-      ],
-      deps.geminiClient,
-      deps.geminiModel,
+        1,
+        1,
+        deps.geminiClient,
+        deps.geminiModel,
+      ),
     );
   }
 

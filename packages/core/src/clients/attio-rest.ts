@@ -28,7 +28,7 @@ export interface PersonContext {
 type AttioValue = {
   value?: string | number;
   target_record_id?: string;
-  option?: string;
+  option?: string | { title?: string; id?: string };
   first_name?: string;
   last_name?: string;
   full_name?: string;
@@ -85,7 +85,14 @@ export function extractSelectOption(
   values: Record<string, AttioValue[]> | undefined,
   slug: string,
 ): string | undefined {
-  return values?.[slug]?.[0]?.option;
+  const option = values?.[slug]?.[0]?.option;
+  if (typeof option === "string") {
+    return option;
+  }
+  if (option && typeof option === "object" && typeof option.title === "string") {
+    return option.title;
+  }
+  return undefined;
 }
 
 export function extractPersonName(
@@ -108,6 +115,15 @@ export interface PersonAudioSummary {
   fitScore: number;
   fitTier: string;
   twoLiner?: string;
+}
+
+export async function getPersonAudioSummaryScript(
+  config: AttioRestConfig,
+  recordId: string,
+): Promise<string | undefined> {
+  const person = await getRecord(config, "people", recordId);
+  const script = extractTextValue(person.data?.values, "audio_summary_script")?.trim();
+  return script || undefined;
 }
 
 export async function getPersonAudioSummary(
@@ -546,13 +562,9 @@ export function buildSilverMedalistNoteContent(input: {
 }
 
 export function buildAudioSummaryNoteContent(script: string): string {
-  return [
-    formatDraftForNote("Spoken summary script", script),
-    "",
-    "## Listen",
-    "",
-    "Open **Recruiting Copilot** on this person and tap **Play audio summary** to hear the clip.",
-    "",
-    "_The script is also saved on the person record for replay._",
-  ].join("\n");
+  return formatDraftForNote(
+    "SLNG audio summary",
+    script,
+    "Tap **Play audio summary** in **Recruiting Copilot** on this person to hear it.",
+  );
 }

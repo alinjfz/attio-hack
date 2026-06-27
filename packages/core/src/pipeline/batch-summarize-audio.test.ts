@@ -1,17 +1,17 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { batchGenerateAudioScripts } from "./batch-summarize-audio.js";
+import { batchGenerateCombinedAudioScript } from "./batch-summarize-audio.js";
 
-describe("batchGenerateAudioScripts", () => {
+describe("batchGenerateCombinedAudioScript", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("generates one script preview per candidate in fit-score order", async () => {
-    vi.spyOn(await import("./summarize-list.js"), "generateCandidateReadAloudScript")
-      .mockResolvedValueOnce("First candidate script.")
-      .mockResolvedValueOnce("Second candidate script.");
+  it("generates one combined script for all candidates in fit-score order", async () => {
+    vi.spyOn(await import("./summarize-list.js"), "generateListSummaryScript").mockResolvedValue(
+      "Alex leads at ninety percent. Bob follows at seventy percent.",
+    );
 
-    const segments = await batchGenerateAudioScripts(
+    const preview = await batchGenerateCombinedAudioScript(
       [
         { recordId: "rec_b", name: "Bob", fitScore: 70, fitTier: "Good" },
         { recordId: "rec_a", name: "Alex", fitScore: 90, fitTier: "Strong" },
@@ -21,10 +21,9 @@ describe("batchGenerateAudioScripts", () => {
       },
     );
 
-    expect(segments).toHaveLength(2);
-    expect(segments[0]?.name).toBe("Alex");
-    expect(segments[1]?.name).toBe("Bob");
-    expect(segments[0]?.recordId).toBe("rec_a");
-    expect(segments[0]).not.toHaveProperty("audioBase64");
+    expect(preview.script).toContain("Alex");
+    expect(preview.candidates).toHaveLength(2);
+    expect(preview.candidates[0]?.name).toBe("Alex");
+    expect(preview.candidates[1]?.name).toBe("Bob");
   });
 });

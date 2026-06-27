@@ -1,31 +1,18 @@
 import { showDialog } from "attio/client";
-import type { AudioSegmentPreview } from "@recruiting-copilot/core/pipeline/batch-summarize-audio";
-import { AudioPlaylistDialog } from "./audio-playlist-dialog";
-import { SingleAudioDialog } from "./single-audio-dialog";
+import type { CombinedAudioPreview } from "@recruiting-copilot/core/pipeline/batch-summarize-audio";
+import { CombinedAudioDialog } from "./combined-audio-dialog";
 
-export async function openAudioPlaylistDialog(options: {
+export async function openCombinedAudioDialog(options: {
   title: string;
-  segments: AudioSegmentPreview[];
+  preview: CombinedAudioPreview;
 }): Promise<void> {
   await showDialog({
     title: options.title,
     Dialog: ({ hideDialog }) => (
-      <AudioPlaylistDialog hideDialog={hideDialog} segments={options.segments} />
-    ),
-  });
-}
-
-export async function openSingleAudioDialog(options: {
-  script: string;
-  candidateName?: string;
-}): Promise<void> {
-  await showDialog({
-    title: "SLNG audio summary",
-    Dialog: ({ hideDialog }) => (
-      <SingleAudioDialog
+      <CombinedAudioDialog
         hideDialog={hideDialog}
-        script={options.script}
-        candidateName={options.candidateName}
+        preview={options.preview}
+        title={options.title}
       />
     ),
   });
