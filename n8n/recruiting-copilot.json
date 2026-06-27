@@ -4,15 +4,15 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Recruiting Copilot (standalone)\n\n**Trigger:** POST JSON to this webhook.\n\n**Required:** `candidateName`, `roleDescription`, `cvText`\n\n**Optional:** `roleTitle`, `linkedinUrl`, `recordId` (Attio person UUID), `writeToAttio` (default true when recordId set)\n\n**Flow:** normalize → research API → full review package → **manual approval form** → optional Attio write-back → final JSON response.\n\n**Env vars** (Docker loads from repo `.env`): `API_PUBLIC_URL`, `WEBHOOK_SECRET`\n\nSample body: `n8n/sample-payload.json` · Test API only: `pnpm n8n:smoke`",
-        "height": 340,
-        "width": 420
+        "content": "## Recruiting Copilot (standalone)\n\n**Trigger:** `POST /webhook/recruiting-copilot`\n\n**Required:** `candidateName`, `roleDescription`, `cvText`\n\n**Optional:**\n- `roleTitle`, `linkedinUrl`\n- `recordId` + `writeToAttio` → Attio REST write-back after approval\n- `enableAudioSummary: true` → `POST /tts` (SLNG; needs `SLNG_API_KEY` on api/)\n\n**API (packages/core via api/):**\n- `POST /webhook/research` — fit + drafts\n- `POST /tts` — hosted SLNG audio URL\n- `GET /health`\n\n**Start API:** `pnpm api:dev` or `pnpm api:public` (Cloudflare tunnel)\n\n**Env (Docker):** `API_PUBLIC_URL` → `host.docker.internal:3001`, `WEBHOOK_SECRET` from `.env`\n\nSample: `n8n/sample-payload.json` · Smoke: `pnpm n8n:smoke`",
+        "height": 400,
+        "width": 440
       },
       "id": "note-overview",
       "name": "README",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [200, 80]
+      "position": [180, 40]
     },
     {
       "parameters": {
@@ -25,18 +25,18 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [260, 460],
+      "position": [260, 500],
       "webhookId": "recruiting-copilot"
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json;\nconst body = raw.body ?? raw;\n\nconst required = ['roleDescription', 'cvText', 'candidateName'];\nconst missing = required.filter((k) => !body[k] || String(body[k]).trim() === '');\nif (missing.length) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nconst recordId = body.recordId ?? null;\nconst writeToAttio = body.writeToAttio !== false && Boolean(recordId);\n\nreturn [{\n  json: {\n    recordId,\n    roleDescription: String(body.roleDescription).trim(),\n    cvText: String(body.cvText).trim(),\n    candidateName: String(body.candidateName).trim(),\n    linkedinUrl: body.linkedinUrl ?? null,\n    roleTitle: body.roleTitle ?? null,\n    writeToAttio,\n    receivedAt: new Date().toISOString(),\n  },\n}];"
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body ?? raw;\n\nconst required = ['roleDescription', 'cvText', 'candidateName'];\nconst missing = required.filter((k) => !body[k] || String(body[k]).trim() === '');\nif (missing.length) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nconst recordId = body.recordId ?? null;\nconst writeToAttio = body.writeToAttio !== false && Boolean(recordId);\n\nreturn [{\n  json: {\n    recordId,\n    roleDescription: String(body.roleDescription).trim(),\n    cvText: String(body.cvText).trim(),\n    candidateName: String(body.candidateName).trim(),\n    linkedinUrl: body.linkedinUrl ?? null,\n    roleTitle: body.roleTitle ?? null,\n    writeToAttio,\n    enableAudioSummary: body.enableAudioSummary === true,\n    receivedAt: new Date().toISOString(),\n  },\n}];"
       },
       "id": "normalize-input",
       "name": "Normalize input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 460]
+      "position": [500, 500]
     },
     {
       "parameters": {
@@ -46,7 +46,7 @@
       "name": "Prepare research body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [740, 460]
+      "position": [740, 500]
     },
     {
       "parameters": {
@@ -55,56 +55,48 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Webhook-Secret",
-              "value": "={{ $env.WEBHOOK_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}",
-        "options": {
-          "timeout": 300000
-        }
+        "options": { "timeout": 300000 }
       },
       "id": "http-research",
       "name": "Run research API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [980, 460]
+      "position": [980, 500]
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Normalize input').first().json;\nconst research = $('Run research API').first().json;\nconst { fit, bundle } = research;\n\nconst lines = (items, prefix) =>\n  (items ?? []).map((t, i) => `${prefix}${i + 1}. ${t}`).join('\\n') || `${prefix}(none)`;\n\nconst gaps = (bundle.gapAnalysis ?? [])\n  .map((g) => `- **${g.area}** [${g.severity}]: ${g.gap}`)\n  .join('\\n') || '- (none identified)';\n\nconst web = (bundle.webBullets ?? [])\n  .map((b) => `- ${b.text}${b.source ? ` (${b.source})` : ''}`)\n  .join('\\n') || '- (no web enrichment — set ENABLE_TAVILY=true on API)';\n\nconst reviewMarkdown = [\n  `# Candidate review: ${input.candidateName}`,\n  '',\n  `**Fit:** ${fit.score}% — **${fit.tier}** (raw similarity ${fit.rawSimilarity?.toFixed?.(3) ?? fit.rawSimilarity})`,\n  '',\n  '## Two-liner',\n  bundle.twoLiner,\n  '',\n  '## Pros',\n  lines(bundle.fitReasoning?.pros, ''),\n  '',\n  '## Cons',\n  lines(bundle.fitReasoning?.cons, ''),\n  '',\n  '## Gap analysis',\n  gaps,\n  '',\n  '## HM internal note',\n  bundle.hmNote,\n  '',\n  '## Client submittal draft',\n  bundle.clientSubmittalDraft,\n  '',\n  '## Candidate email draft',\n  bundle.candidateEmailDraft,\n  '',\n  '## Web / LinkedIn bullets',\n  web,\n].join('\\n');\n\nreturn [{\n  json: {\n    candidateName: input.candidateName,\n    recordId: input.recordId,\n    roleTitle: input.roleTitle,\n    linkedinUrl: input.linkedinUrl,\n    writeToAttio: input.writeToAttio,\n    fitScore: fit.score,\n    fitTier: fit.tier,\n    rawSimilarity: fit.rawSimilarity,\n    twoLiner: bundle.twoLiner,\n    pros: bundle.fitReasoning?.pros ?? [],\n    cons: bundle.fitReasoning?.cons ?? [],\n    gapAnalysis: bundle.gapAnalysis ?? [],\n    hmNote: bundle.hmNote,\n    clientSubmittalDraft: bundle.clientSubmittalDraft,\n    candidateEmailDraft: bundle.candidateEmailDraft,\n    webBullets: bundle.webBullets ?? [],\n    reviewMarkdown,\n    reviewSummary: `Fit ${fit.score}% (${fit.tier}) — ${bundle.twoLiner}`,\n    research,\n    input,\n  },\n}];"
+        "jsCode": "const input = $('Normalize input').first().json;\nconst research = $('Run research API').first().json;\nconst { fit, bundle } = research;\n\nconst lines = (items, prefix) =>\n  (items ?? []).map((t, i) => `${prefix}${i + 1}. ${t}`).join('\\n') || `${prefix}(none)`;\n\nconst gaps = (bundle.gapAnalysis ?? [])\n  .map((g) => `- **${g.area}** [${g.severity}]: ${g.gap}`)\n  .join('\\n') || '- (none identified)';\n\nconst web = (bundle.webBullets ?? [])\n  .map((b) => `- ${b.text}${b.source ? ` (${b.source})` : ''}`)\n  .join('\\n') || '- (no web enrichment — set ENABLE_TAVILY=true on api/)';\n\nconst reviewMarkdown = [\n  `# Candidate review: ${input.candidateName}`,\n  '',\n  `**Fit:** ${fit.score}% — **${fit.tier}** (raw similarity ${fit.rawSimilarity?.toFixed?.(3) ?? fit.rawSimilarity})`,\n  '',\n  '## Two-liner',\n  bundle.twoLiner,\n  '',\n  '## Pros',\n  lines(bundle.fitReasoning?.pros, ''),\n  '',\n  '## Cons',\n  lines(bundle.fitReasoning?.cons, ''),\n  '',\n  '## Gap analysis',\n  gaps,\n  '',\n  '## HM internal note',\n  bundle.hmNote,\n  '',\n  '## Client submittal draft',\n  bundle.clientSubmittalDraft,\n  '',\n  '## Candidate email draft',\n  bundle.candidateEmailDraft,\n  '',\n  '## Web / LinkedIn bullets',\n  web,\n].join('\\n');\n\nconst ttsScript = [\n  `${input.candidateName} scores ${fit.score} percent, ${fit.tier} fit.`,\n  bundle.twoLiner,\n  bundle.fitReasoning?.pros?.length\n    ? `Strengths include ${bundle.fitReasoning.pros.slice(0, 2).join(' and ')}.`\n    : '',\n].filter(Boolean).join(' ');\n\nreturn [{\n  json: {\n    candidateName: input.candidateName,\n    recordId: input.recordId,\n    roleTitle: input.roleTitle,\n    linkedinUrl: input.linkedinUrl,\n    writeToAttio: input.writeToAttio,\n    enableAudioSummary: input.enableAudioSummary,\n    fitScore: fit.score,\n    fitTier: fit.tier,\n    rawSimilarity: fit.rawSimilarity,\n    twoLiner: bundle.twoLiner,\n    pros: bundle.fitReasoning?.pros ?? [],\n    cons: bundle.fitReasoning?.cons ?? [],\n    gapAnalysis: bundle.gapAnalysis ?? [],\n    hmNote: bundle.hmNote,\n    clientSubmittalDraft: bundle.clientSubmittalDraft,\n    candidateEmailDraft: bundle.candidateEmailDraft,\n    webBullets: bundle.webBullets ?? [],\n    reviewMarkdown,\n    reviewSummary: `Fit ${fit.score}% (${fit.tier}) — ${bundle.twoLiner}`,\n    ttsScript,\n    research,\n    input,\n  },\n}];"
       },
       "id": "build-review",
       "name": "Build full review",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1220, 460]
+      "position": [1220, 500]
     },
     {
       "parameters": {
-        "content": "## Manual approval gate\n\nExecution pauses here. Open the **form URL** from this node, review `reviewMarkdown`, then submit:\n\n- **Approve** → continues (Attio write-back if `recordId` set)\n- **Reject** → workflow ends with rejection payload\n\nNothing is sent to a client or CRM until you approve.",
-        "height": 260,
-        "width": 380
+        "content": "## Manual approval gate\n\nExecution pauses here. Open the **form URL** on this node.\n\n- **approve** → optional Attio write-back + optional SLNG audio\n- **reject** → nothing written or sent\n\nReview `reviewMarkdown` in the execution panel.",
+        "height": 220,
+        "width": 360
       },
       "id": "note-approval",
       "name": "Note approval",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1420, 200]
+      "position": [1420, 240]
     },
     {
       "parameters": {
         "resume": "form",
         "formTitle": "Approve candidate research?",
-        "formDescription": "={{ $json.reviewSummary }}\\n\\nOpen the execution data panel for the full reviewMarkdown if you need more detail.",
+        "formDescription": "={{ $json.reviewSummary }}",
         "formFields": {
           "values": [
             {
@@ -130,25 +122,18 @@
       "name": "Wait for approval",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1460, 460]
+      "position": [1460, 500]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
           "conditions": [
             {
               "id": "approved",
               "leftValue": "={{ $('Wait for approval').item.json.Decision }}",
               "rightValue": "approve",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "operator": { "type": "string", "operation": "equals" }
             }
           ],
           "combinator": "and"
@@ -159,7 +144,7 @@
       "name": "Approved?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1700, 460]
+      "position": [1700, 500]
     },
     {
       "parameters": {
@@ -169,25 +154,18 @@
       "name": "Rejected output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1940, 620]
+      "position": [1940, 680]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
           "conditions": [
             {
               "id": "has-record",
               "leftValue": "={{ $('Build full review').item.json.writeToAttio }}",
               "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
+              "operator": { "type": "boolean", "operation": "true" }
             }
           ],
           "combinator": "and"
@@ -198,7 +176,7 @@
       "name": "Write to Attio?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1940, 360]
+      "position": [1940, 400]
     },
     {
       "parameters": {
@@ -208,7 +186,7 @@
       "name": "Prepare Attio write-back",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2180, 260]
+      "position": [2180, 300]
     },
     {
       "parameters": {
@@ -217,195 +195,265 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Webhook-Secret",
-              "value": "={{ $env.WEBHOOK_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}",
-        "options": {
-          "timeout": 300000
-        }
+        "options": { "timeout": 300000 }
       },
       "id": "http-approve",
       "name": "Attio write-back API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2420, 260]
+      "position": [2420, 300]
     },
     {
       "parameters": {
-        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\nconst attio = $('Attio write-back API').first().json;\n\nreturn [{\n  json: {\n    status: 'approved',\n    mode: 'attio_writeback',\n    candidateName: review.candidateName,\n    recordId: review.recordId,\n    fitScore: attio.fit?.score ?? review.fitScore,\n    fitTier: attio.fit?.tier ?? review.fitTier,\n    twoLiner: attio.bundle?.twoLiner ?? review.twoLiner,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Approved — fit fields and HM note written to Attio via API (requires ATTIO_API_TOKEN on api/).',\n    reviewMarkdown: review.reviewMarkdown,\n    clientSubmittalDraft: review.clientSubmittalDraft,\n    candidateEmailDraft: review.candidateEmailDraft,\n    attioResult: attio,\n  },\n}];"
+        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\nconst attio = $('Attio write-back API').first().json;\n\nreturn [{\n  json: {\n    status: 'approved',\n    mode: 'attio_writeback',\n    candidateName: review.candidateName,\n    recordId: review.recordId,\n    fitScore: attio.fit?.score ?? review.fitScore,\n    fitTier: attio.fit?.tier ?? review.fitTier,\n    twoLiner: attio.bundle?.twoLiner ?? review.twoLiner,\n    enableAudioSummary: review.enableAudioSummary,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Approved — fit fields and HM note written to Attio.',\n    reviewMarkdown: review.reviewMarkdown,\n    clientSubmittalDraft: review.clientSubmittalDraft,\n    candidateEmailDraft: review.candidateEmailDraft,\n    ttsScript: review.ttsScript,\n    attioResult: attio,\n    _reviewNode: 'Build full review',\n    _baseNode: 'Attio approved base',\n  },\n}];"
       },
       "id": "attio-success",
-      "name": "Attio approved output",
+      "name": "Attio approved base",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2660, 260]
+      "position": [2660, 300]
     },
     {
       "parameters": {
-        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\n\nreturn [{\n  json: {\n    status: 'approved',\n    mode: 'standalone',\n    candidateName: review.candidateName,\n    fitScore: review.fitScore,\n    fitTier: review.fitTier,\n    twoLiner: review.twoLiner,\n    pros: review.pros,\n    cons: review.cons,\n    gapAnalysis: review.gapAnalysis,\n    hmNote: review.hmNote,\n    clientSubmittalDraft: review.clientSubmittalDraft,\n    candidateEmailDraft: review.candidateEmailDraft,\n    webBullets: review.webBullets,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Approved — standalone mode (no recordId). Copy drafts from this JSON or wire Slack/Email nodes here.',\n    reviewMarkdown: review.reviewMarkdown,\n    reviewSummary: review.reviewSummary,\n  },\n}];"
+        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\n\nreturn [{\n  json: {\n    status: 'approved',\n    mode: 'standalone',\n    candidateName: review.candidateName,\n    fitScore: review.fitScore,\n    fitTier: review.fitTier,\n    twoLiner: review.twoLiner,\n    pros: review.pros,\n    cons: review.cons,\n    gapAnalysis: review.gapAnalysis,\n    hmNote: review.hmNote,\n    clientSubmittalDraft: review.clientSubmittalDraft,\n    candidateEmailDraft: review.candidateEmailDraft,\n    webBullets: review.webBullets,\n    enableAudioSummary: review.enableAudioSummary,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Approved — standalone mode. Copy drafts from this JSON or chain Slack/Email nodes.',\n    reviewMarkdown: review.reviewMarkdown,\n    reviewSummary: review.reviewSummary,\n    ttsScript: review.ttsScript,\n    _reviewNode: 'Build full review',\n    _baseNode: 'Standalone approved base',\n  },\n}];"
       },
       "id": "standalone-success",
-      "name": "Standalone approved output",
+      "name": "Standalone approved base",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2180, 460]
+      "position": [2180, 500]
     },
     {
       "parameters": {
-        "content": "## Optional next steps (add your own nodes)\n\nAfter **Standalone approved output**, chain:\n- **Slack** — post `reviewMarkdown`\n- **Gmail** — send `clientSubmittalDraft` as draft\n- **Google Sheets** — log fit scores\n- **HTTP** — push to your ATS\n\nAttio path requires `recordId` + `ATTIO_API_TOKEN` in api/ `.env`.",
-        "height": 240,
-        "width": 360
+        "content": "## SLNG audio (optional)\n\nWhen `enableAudioSummary: true` in the webhook body:\n\n`POST /tts` → `{ url, downloadUrl, contentType }`\n\nRequires `SLNG_API_KEY` on api/. For public playback URLs use `pnpm api:public`.",
+        "height": 180,
+        "width": 340
+      },
+      "id": "note-slng",
+      "name": "Note SLNG",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [2860, 80]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "audio-on",
+              "leftValue": "={{ $json.enableAudioSummary }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-slng-standalone",
+      "name": "SLNG audio? (standalone)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2420, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "audio-on-attio",
+              "leftValue": "={{ $json.enableAudioSummary }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-slng-attio",
+      "name": "SLNG audio? (attio)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const review = $('Build full review').first().json;\nreturn [{ json: { text: review.ttsScript } }];"
+      },
+      "id": "prepare-tts-standalone",
+      "name": "Prepare TTS (standalone)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 440]
+    },
+    {
+      "parameters": {
+        "jsCode": "const review = $('Build full review').first().json;\nreturn [{ json: { text: review.ttsScript } }];"
+      },
+      "id": "prepare-tts-attio",
+      "name": "Prepare TTS (attio)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3140, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_PUBLIC_URL }}/tts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "http-tts-standalone",
+      "name": "SLNG TTS API (standalone)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2900, 440]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_PUBLIC_URL }}/tts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "http-tts-attio",
+      "name": "SLNG TTS API (attio)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3380, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Standalone approved base').first().json;\nconst ttsItems = $('SLNG TTS API (standalone)').all();\nconst audio = ttsItems.length ? ttsItems[0].json : null;\n\nreturn [{\n  json: {\n    status: base.status,\n    mode: base.mode,\n    candidateName: base.candidateName,\n    fitScore: base.fitScore,\n    fitTier: base.fitTier,\n    twoLiner: base.twoLiner,\n    pros: base.pros,\n    cons: base.cons,\n    gapAnalysis: base.gapAnalysis,\n    hmNote: base.hmNote,\n    clientSubmittalDraft: base.clientSubmittalDraft,\n    candidateEmailDraft: base.candidateEmailDraft,\n    webBullets: base.webBullets,\n    reviewerNotes: base.reviewerNotes,\n    reviewMarkdown: base.reviewMarkdown,\n    reviewSummary: base.reviewSummary,\n    audioSummary: audio ? {\n      id: audio.id,\n      url: audio.url,\n      downloadUrl: audio.downloadUrl,\n      contentType: audio.contentType,\n    } : null,\n    message: audio\n      ? `${base.message} Listen: ${audio.url}`\n      : base.message,\n  },\n}];"
+      },
+      "id": "standalone-final",
+      "name": "Standalone final output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3140, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Attio approved base').first().json;\nconst ttsItems = $('SLNG TTS API (attio)').all();\nconst audio = ttsItems.length ? ttsItems[0].json : null;\n\nreturn [{\n  json: {\n    status: base.status,\n    mode: base.mode,\n    candidateName: base.candidateName,\n    recordId: base.recordId,\n    fitScore: base.fitScore,\n    fitTier: base.fitTier,\n    twoLiner: base.twoLiner,\n    reviewerNotes: base.reviewerNotes,\n    reviewMarkdown: base.reviewMarkdown,\n    clientSubmittalDraft: base.clientSubmittalDraft,\n    candidateEmailDraft: base.candidateEmailDraft,\n    attioResult: base.attioResult,\n    audioSummary: audio ? {\n      id: audio.id,\n      url: audio.url,\n      downloadUrl: audio.downloadUrl,\n      contentType: audio.contentType,\n    } : null,\n    message: audio\n      ? `${base.message} Listen: ${audio.url}`\n      : base.message,\n  },\n}];"
+      },
+      "id": "attio-final",
+      "name": "Attio final output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3620, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Wire your own outputs\n\nAfter **Standalone final output** / **Attio final output**:\n- **Slack** → `reviewMarkdown`\n- **Gmail** → `clientSubmittalDraft`\n- **HTTP** → `audioSummary.url`",
+        "height": 160,
+        "width": 320
       },
       "id": "note-integrations",
       "name": "Note integrations",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [2620, 40]
+      "position": [3500, 40]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Normalize input",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Normalize input", "type": "main", "index": 0 }]]
     },
     "Normalize input": {
-      "main": [
-        [
-          {
-            "node": "Prepare research body",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Prepare research body", "type": "main", "index": 0 }]]
     },
     "Prepare research body": {
-      "main": [
-        [
-          {
-            "node": "Run research API",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Run research API", "type": "main", "index": 0 }]]
     },
     "Run research API": {
-      "main": [
-        [
-          {
-            "node": "Build full review",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Build full review", "type": "main", "index": 0 }]]
     },
     "Build full review": {
-      "main": [
-        [
-          {
-            "node": "Wait for approval",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Wait for approval", "type": "main", "index": 0 }]]
     },
     "Wait for approval": {
-      "main": [
-        [
-          {
-            "node": "Approved?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]]
     },
     "Approved?": {
       "main": [
-        [
-          {
-            "node": "Write to Attio?",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Rejected output",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Write to Attio?", "type": "main", "index": 0 }],
+        [{ "node": "Rejected output", "type": "main", "index": 0 }]
       ]
     },
     "Write to Attio?": {
       "main": [
-        [
-          {
-            "node": "Prepare Attio write-back",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Standalone approved output",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Prepare Attio write-back", "type": "main", "index": 0 }],
+        [{ "node": "Standalone approved base", "type": "main", "index": 0 }]
       ]
     },
     "Prepare Attio write-back": {
-      "main": [
-        [
-          {
-            "node": "Attio write-back API",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Attio write-back API", "type": "main", "index": 0 }]]
     },
     "Attio write-back API": {
+      "main": [[{ "node": "Attio approved base", "type": "main", "index": 0 }]]
+    },
+    "Attio approved base": {
+      "main": [[{ "node": "SLNG audio? (attio)", "type": "main", "index": 0 }]]
+    },
+    "Standalone approved base": {
+      "main": [[{ "node": "SLNG audio? (standalone)", "type": "main", "index": 0 }]]
+    },
+    "SLNG audio? (standalone)": {
       "main": [
-        [
-          {
-            "node": "Attio approved output",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Prepare TTS (standalone)", "type": "main", "index": 0 }],
+        [{ "node": "Standalone final output", "type": "main", "index": 0 }]
       ]
+    },
+    "SLNG audio? (attio)": {
+      "main": [
+        [{ "node": "Prepare TTS (attio)", "type": "main", "index": 0 }],
+        [{ "node": "Attio final output", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare TTS (standalone)": {
+      "main": [[{ "node": "SLNG TTS API (standalone)", "type": "main", "index": 0 }]]
+    },
+    "Prepare TTS (attio)": {
+      "main": [[{ "node": "SLNG TTS API (attio)", "type": "main", "index": 0 }]]
+    },
+    "SLNG TTS API (standalone)": {
+      "main": [[{ "node": "Standalone final output", "type": "main", "index": 0 }]]
+    },
+    "SLNG TTS API (attio)": {
+      "main": [[{ "node": "Attio final output", "type": "main", "index": 0 }]]
     }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "versionId": "recruiting-copilot-v2",
-  "meta": {
-    "templateCredsSetupCompleted": false
-  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "recruiting-copilot-v3",
+  "meta": { "templateCredsSetupCompleted": false },
   "tags": []
 }

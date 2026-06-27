@@ -53,7 +53,7 @@ export function buildDraftPrompt(input: GenerateDraftsInput): string {
     "- clientSubmittalDraft: client-facing submittal email draft with greeting, body paragraphs, and sign-off separated by blank lines",
     "- candidateEmailDraft: optional outreach/update email draft with clear paragraph breaks",
     "- rejectionEmailDraft: polite personalised rejection email for this role with greeting, reason paragraphs, and warm closing — not sent automatically",
-    "- webBullets: research highlights; include source URLs when available",
+    "- webBullets: research highlights; include absolute source URLs (https://...) when available",
   ].join("\n");
 }
 

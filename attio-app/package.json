@@ -6,6 +6,9 @@
   "scripts": {
     "attio": "attio",
     "dev": "attio dev",
+    "api:dev": "pnpm -C .. api:dev",
+    "api:tunnel": "pnpm -C .. api:tunnel",
+    "api:public": "pnpm -C .. api:public",
     "build": "attio build",
     "format": "biome format --write src/",
     "format:check": "biome format src/",

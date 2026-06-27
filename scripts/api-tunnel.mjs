@@ -13,7 +13,17 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const envPath = resolve(root, ".env");
-const port = process.env.PORT ?? "3001";
+
+function readEnvValue(name) {
+  try {
+    const match = readFileSync(envPath, "utf8").match(new RegExp(`^${name}=(.*)$`, "m"));
+    return match?.[1]?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const port = readEnvValue("PORT") ?? "3001";
 const localUrl = `http://127.0.0.1:${port}`;
 
 async function waitForApi(maxAttempts = 15) {
@@ -47,21 +57,16 @@ function updateEnvPublicUrl(publicUrl) {
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd();
 
-  const n8nBlock = withoutOld.includes("# ── n8n webhook API");
+  const portLine = contents.match(/^PORT=\d+$/m)?.[0] ?? `PORT=${port}`;
   let updated;
-  if (n8nBlock) {
-    updated = withoutOld.replace(
-      /(# ── n8n webhook API[^\n]*\n(?:.*\n)*?PORT=\d+\n)/,
-      `$1API_PUBLIC_URL=${publicUrl}\n`,
-    );
-    if (updated === withoutOld) {
-      updated = `${withoutOld}\nAPI_PUBLIC_URL=${publicUrl}\n`;
-    }
+  if (withoutOld.includes(portLine)) {
+    const idx = withoutOld.indexOf(portLine) + portLine.length;
+    updated = `${withoutOld.slice(0, idx)}\nAPI_PUBLIC_URL=${publicUrl}${withoutOld.slice(idx)}`;
   } else {
     updated = `${withoutOld}\nAPI_PUBLIC_URL=${publicUrl}\n`;
   }
 
-  writeFileSync(envPath, `${updated}\n`);
+  writeFileSync(envPath, `${updated.endsWith("\n") ? updated : `${updated}\n`}`);
 }
 
 function printAttioInstructions(publicUrl) {
@@ -83,7 +88,11 @@ console.log(`Checking ${localUrl}/health …`);
 const apiUp = await waitForApi();
 if (!apiUp) {
   console.error("");
-  console.error("API is not running. Start it first in another terminal:");
+  console.error("API is not running on port", port + ".");
+  console.error("Use the all-in-one command instead (starts API + tunnel):");
+  console.error("  pnpm api:public");
+  console.error("");
+  console.error("Or start the API first, then run api:tunnel again:");
   console.error("  pnpm api:dev");
   console.error("");
   process.exit(1);

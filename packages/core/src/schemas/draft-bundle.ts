@@ -1,5 +1,41 @@
 import { z } from "zod";
 
+/** Accept bare domains from LLM output; drop values that still aren't valid URLs. */
+export function normalizeOptionalHttpUrl(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : trimmed.includes(".")
+      ? `https://${trimmed}`
+      : undefined;
+
+  if (!withProtocol) {
+    return undefined;
+  }
+
+  try {
+    return new URL(withProtocol).href;
+  } catch {
+    return undefined;
+  }
+}
+
+const optionalHttpUrl = z.preprocess(
+  normalizeOptionalHttpUrl,
+  z.string().url().optional(),
+);
+
 export const DraftBundleSchema = z.object({
   twoLiner: z.string(),
   fitReasoning: z.object({
@@ -20,7 +56,7 @@ export const DraftBundleSchema = z.object({
   webBullets: z.array(
     z.object({
       text: z.string(),
-      source: z.string().url().optional(),
+      source: optionalHttpUrl,
     }),
   ),
 });

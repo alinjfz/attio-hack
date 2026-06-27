@@ -77,6 +77,29 @@ PATCH `fit_score`, `fit_tier`, `two_liner` and POST markdown HM note with pros/c
 
 When `approve: true` and `recordId` are set, the API also writes fit fields and HM note using `ATTIO_API_TOKEN`.
 
+### `POST /tts`
+
+**Auth:** `X-Webhook-Secret: <WEBHOOK_SECRET>`
+
+**Body:**
+
+```json
+{ "text": "Alex Morgan scores 75 percent, Good fit. …" }
+```
+
+**Response:**
+
+```json
+{
+  "id": "uuid",
+  "url": "https://your-api/tts/uuid",
+  "downloadUrl": "https://your-api/tts/uuid?download=1",
+  "contentType": "audio/wav"
+}
+```
+
+Requires `SLNG_API_KEY` on the api server. For public playback URLs from Attio or n8n, run `pnpm api:public` (Cloudflare tunnel) and use the printed `API_PUBLIC_URL`.
+
 ## Attio custom field slugs
 
 | Object | Slug | Type |

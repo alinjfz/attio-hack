@@ -5,5 +5,6 @@
   "cvText": "Senior full-stack engineer with 8 years building TypeScript/React systems at scale.\nLed migration of monolithic CRM extensions to event-driven microservices.\nStrong experience with Node.js, PostgreSQL, AWS, and API design.\nPreviously built recruiting tooling integrating ATS workflows with custom scoring pipelines.\nEducation: BSc Computer Science, University of Manchester.",
   "linkedinUrl": "https://linkedin.com/in/alex-morgan",
   "recordId": null,
-  "writeToAttio": false
+  "writeToAttio": false,
+  "enableAudioSummary": false
 }

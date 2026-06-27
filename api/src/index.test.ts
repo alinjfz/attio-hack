@@ -74,4 +74,31 @@ describe("api tts hosting", () => {
     expect(body.url).toContain("/tts/");
     expect(body.downloadUrl).toContain("download=1");
   });
+
+  it("POST /tts uses request Host for public URLs when behind a tunnel", async () => {
+    process.env.WEBHOOK_SECRET = "test-secret";
+    process.env.SLNG_API_KEY = "test-key";
+    process.env.API_PUBLIC_URL = "https://stale-subdomain.trycloudflare.com";
+
+    vi.spyOn(await import("@recruiting-copilot/core"), "textToSpeechBuffer").mockResolvedValue({
+      buffer: new Uint8Array([9, 8, 7]).buffer,
+      contentType: "audio/wav",
+    });
+
+    const response = await app.request("/tts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Webhook-Secret": "test-secret",
+        Host: "fresh-subdomain.trycloudflare.com",
+        "X-Forwarded-Proto": "https",
+      },
+      body: JSON.stringify({ text: "Hello" }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.url).toMatch(/^https:\/\/fresh-subdomain\.trycloudflare\.com\/tts\//);
+    expect(body.downloadUrl).toMatch(/^https:\/\/fresh-subdomain\.trycloudflare\.com\/tts\//);
+  });
 });

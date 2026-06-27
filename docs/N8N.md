@@ -16,6 +16,7 @@ Use this when you want your own stack: webhook in, scored fit + drafts out, huma
 | 4. Manual approval | n8n **Wait** form — approve or reject |
 | 5a. Standalone | Returns full JSON — copy drafts or chain Slack/Gmail/Sheets |
 | 5b. Attio (optional) | If `recordId` set + approved → PATCH person + HM note via REST |
+| 6. SLNG audio (optional) | If `enableAudioSummary: true` → `POST /tts` → hosted `audioSummary.url` |
 
 Nothing auto-sends. Nothing hits Attio unless you pass `recordId` and approve.
 
@@ -92,6 +93,7 @@ API_PUBLIC_URL=http://localhost:3001
 |----------|---------|
 | `ATTIO_API_TOKEN` | Only for Attio write-back after approval |
 | `ENABLE_TAVILY=true` + `TAVILY_API_KEY` | Web/LinkedIn bullets with sources |
+| `SLNG_API_KEY` | `POST /tts` when `enableAudioSummary: true` |
 | `GEMINI_MODEL` | Default `gemini-2.5-flash` |
 | `SUPERLINKED_MODEL` | Default `BAAI/bge-m3` |
 
@@ -168,6 +170,7 @@ Runs `n8n/sample-payload.json` against `POST /webhook/research`. Needs live Supe
 | `linkedinUrl` | string | — | Used when Tavily enabled |
 | `recordId` | string \| null | `null` | Attio Person record UUID |
 | `writeToAttio` | boolean | `true` if `recordId` set | Set `false` to skip CRM even with `recordId` |
+| `enableAudioSummary` | boolean | `false` | Set `true` to call `POST /tts` after approval (needs `SLNG_API_KEY`) |
 
 ### Example — standalone (no CRM)
 
@@ -243,8 +246,9 @@ File: `n8n/recruiting-copilot.json`
 | **Approved?** | Branch on decision |
 | **Write to Attio?** | `recordId` + `writeToAttio` |
 | **Attio write-back API** | Same endpoint with `approve: true` |
-| **Standalone approved output** | Full JSON for your integrations |
-| **Attio approved output** | Confirms CRM write |
+| **SLNG audio?** | Branches on `enableAudioSummary` |
+| **SLNG TTS API** | `POST /tts` with `ttsScript` |
+| **Standalone / Attio final output** | Full JSON + optional `audioSummary` |
 | **Rejected output** | No external writes |
 
 ### Response fields (standalone approved)

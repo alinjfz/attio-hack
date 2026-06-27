@@ -70,12 +70,12 @@ function Page() {
         <TextInput
           label="API public URL (for audio hosting)"
           name="api_public_url"
-          placeholder="https://xxxx.ngrok-free.app"
+          placeholder="https://xxxx.trycloudflare.com"
         />
         <TextInput
           label="Webhook secret"
           name="webhook_secret"
-          placeholder="same as WEBHOOK_SECRET in .env"
+          placeholder="same as WEBHOOK_SECRET in .env — run pnpm api:public for URL"
         />
       </Section>
     </Form>

@@ -1,6 +1,6 @@
 import { Button, Link, LoadingState, Section, TextBlock, showToast } from "attio/client";
 import { useState } from "react";
-import type { HostedAudioPart } from "../server/host-audio.server";
+import type { HostedAudio } from "../server/host-audio.server";
 import hostAudioForScript from "../server/host-audio.server";
 
 export function PlayAudioSummaryButton({
@@ -10,12 +10,12 @@ export function PlayAudioSummaryButton({
   script: string;
   label?: string;
 }) {
-  const [parts, setParts] = useState<HostedAudioPart[]>([]);
+  const [audio, setAudio] = useState<HostedAudio | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("");
 
   const handleGenerate = async () => {
-    if (parts.length > 0) {
+    if (audio) {
       return;
     }
 
@@ -24,13 +24,10 @@ export function PlayAudioSummaryButton({
 
     try {
       const hosted = await hostAudioForScript(script);
-      setParts(hosted);
+      setAudio(hosted);
       await showToast({
         title: "Audio ready",
-        text:
-          hosted.length === 1
-            ? "Open or download the link below to listen on your device."
-            : `${hosted.length} parts — open each link in order.`,
+        text: "Open or download the link below to listen on your device.",
         variant: "success",
       });
     } catch (error) {
@@ -54,25 +51,18 @@ export function PlayAudioSummaryButton({
         disabled={loading}
       />
       {loading && <LoadingState />}
-      {parts.length > 0 && (
+      {audio && (
         <Section title="Listen on your device">
           <TextBlock>
             Audio is hosted outside Attio. Use Open to play in your browser, or Download to
             save the file.
           </TextBlock>
-          {parts.map((part) => (
-            <Section
-              key={`${part.part}-${part.url}`}
-              title={part.total > 1 ? `Part ${part.part} of ${part.total}` : "Audio clip"}
-            >
-            <TextBlock>
-              <Link href={part.url}>Open in browser</Link>
-            </TextBlock>
-            <TextBlock>
-              <Link href={part.downloadUrl}>Download audio file</Link>
-            </TextBlock>
-            </Section>
-          ))}
+          <TextBlock>
+            <Link href={audio.url}>Open in browser</Link>
+          </TextBlock>
+          <TextBlock>
+            <Link href={audio.downloadUrl}>Download audio file</Link>
+          </TextBlock>
         </Section>
       )}
     </>

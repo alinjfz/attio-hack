@@ -306,6 +306,37 @@ async function findPersonRecordId(
   return match?.id.record_id;
 }
 
+async function createRoleRecord(
+  roleObjectSlug: string,
+  title: string,
+  description: string,
+): Promise<string> {
+  const response = await attioRequest<{ data: AttioRecord }>(
+    "POST",
+    `/objects/${roleObjectSlug}/records`,
+    {
+      data: {
+        values: {
+          title: [{ value: title }],
+          description: [{ value: description }],
+        },
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to create role "${title}": ${response.status} ${response.text}`);
+  }
+
+  const recordId = response.data.data?.id?.record_id;
+  if (!recordId) {
+    throw new Error(`Failed to read record id for new role "${title}"`);
+  }
+
+  console.log(`  ✓ Created role "${title}" → ${recordId}`);
+  return recordId;
+}
+
 async function patchRoleRecord(
   roleObjectSlug: string,
   recordId: string,
@@ -332,6 +363,8 @@ async function patchRoleRecord(
 
 async function patchPersonRecord(input: {
   recordId: string;
+  firstName: string;
+  lastName: string;
   label: string;
   linkedinUrl: string;
   cvText: string;
@@ -344,6 +377,14 @@ async function patchPersonRecord(input: {
     {
       data: {
         values: {
+          name: [
+            {
+              first_name: input.firstName,
+              last_name: input.lastName,
+              full_name: input.label,
+            },
+          ],
+          linkedin: [{ value: input.linkedinUrl }],
           cv_text: [{ value: input.cvText }],
           linkedin_url: [{ value: input.linkedinUrl }],
           role: [
@@ -452,20 +493,20 @@ async function main(): Promise<void> {
   const roleIds = new Map<string, string>();
   for (const role of manifest.roles) {
     const description = readFixture(role.descriptionFile);
-    const recordId = await findRoleRecordId(
+    let recordId = await findRoleRecordId(
       manifest.roleObjectSlug,
       role.title,
       role.recordId,
     );
 
     if (!recordId) {
-      console.log(`  ⚠ Role "${role.title}" not found — create it once manually, then re-run seed`);
-      continue;
+      recordId = await createRoleRecord(manifest.roleObjectSlug, role.title, description);
+    } else {
+      await patchRoleRecord(manifest.roleObjectSlug, recordId, role.title, description);
+      console.log(`  ✓ Role "${role.title}" → ${recordId}`);
     }
 
-    await patchRoleRecord(manifest.roleObjectSlug, recordId, role.title, description);
     roleIds.set(role.key, recordId);
-    console.log(`  ✓ Role "${role.title}" → ${recordId}`);
   }
 
   console.log("\nCandidates (update existing only)");
@@ -493,6 +534,8 @@ async function main(): Promise<void> {
     const label = `${candidate.firstName} ${candidate.lastName}`;
     await patchPersonRecord({
       recordId,
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
       label,
       linkedinUrl: candidate.linkedinUrl,
       cvText: readFixture(candidate.cvFile),

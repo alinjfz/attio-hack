@@ -27,7 +27,12 @@ app.get("/health", (c) =>
   c.json({ ok: true, service: "recruiting-copilot-api", version: "0.0.1" }),
 );
 
-function publicBaseUrl(): string {
+function publicBaseUrl(c: { req: { header: (name: string) => string | undefined } }): string {
+  const host = c.req.header("Host");
+  const proto = c.req.header("X-Forwarded-Proto") ?? "https";
+  if (host && !host.startsWith("localhost") && !host.startsWith("127.0.0.1")) {
+    return `${proto}://${host}`.replace(/\/$/, "");
+  }
   return (process.env.API_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3001}`).replace(
     /\/$/,
     "",
@@ -62,7 +67,7 @@ app.post("/tts", async (c) => {
       voice: process.env.SLNG_TTS_VOICE ?? DEFAULT_SLNG_TTS_VOICE,
     });
     const id = storeAudio(audio.buffer, audio.contentType);
-    const base = publicBaseUrl();
+    const base = publicBaseUrl(c);
     return c.json({
       id,
       url: `${base}/tts/${id}`,
