@@ -205,7 +205,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         </Widget.TextWidget>
       )}
 
-      <Form onSubmit={handleSaveCv} key={`${recordId}-${refreshKey}-${initialCv}`}>
+      <Form onSubmit={handleSaveCv} key={`${recordId}-${refreshKey}`}>
         <TextArea
           name="cvText"
           label="CV text"
@@ -228,7 +228,11 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
       />
 
       <Section title="Listen to summary">
-        <PersonAudioSummary recordId={recordId} savedScript={savedAudioScript} />
+        <PersonAudioSummary
+          recordId={recordId}
+          savedScript={savedAudioScript}
+          storedScript={readText(person?.audio_summary_script)}
+        />
       </Section>
 
       {preview && <BundlePreview fit={preview.fit} bundle={preview.bundle} />}

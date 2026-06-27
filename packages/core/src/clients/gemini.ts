@@ -42,7 +42,57 @@ function stripSchemaMetadata(value: unknown): unknown {
 }
 
 export function createGeminiClient(config: GeminiClientConfig): GeminiClientLike {
-  return { apiKey: config.apiKey };
+  const apiKey = config.apiKey.trim();
+  assertGeminiApiKeyShape(apiKey);
+  return { apiKey };
+}
+
+/** Accepts AI Studio standard (AIza) and auth (AQ.) keys; rejects OAuth tokens. */
+export function assertGeminiApiKeyShape(apiKey: string): void {
+  if (!apiKey) {
+    throw new Error(
+      "Missing Gemini API key. Create one at https://aistudio.google.com/apikey (AIza or AQ. format).",
+    );
+  }
+  if (apiKey.startsWith("ya29.")) {
+    throw new Error(
+      "Gemini key looks like an OAuth access token (ya29.*). Paste your AI Studio API key (AIza or AQ.) instead.",
+    );
+  }
+  if (!apiKey.startsWith("AIza") && !apiKey.startsWith("AQ.")) {
+    throw new Error(
+      "Gemini API key should start with AIza (standard) or AQ. (auth key from AI Studio).",
+    );
+  }
+}
+
+function geminiAuthHeaders(apiKey: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "x-goog-api-key": apiKey,
+  };
+}
+
+function formatGeminiAuthError(status: number, body: string): string {
+  if (status !== 401 && status !== 403) {
+    return `Gemini request failed: ${status} ${body}`;
+  }
+
+  const hints: string[] = [
+    "Use a Google AI Studio API key (AIza standard or AQ. auth key) from https://aistudio.google.com/apikey",
+  ];
+
+  if (body.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED")) {
+    hints.unshift(
+      "Auth failed — confirm the full key is copied and saved in Attio app settings (not only .env).",
+    );
+  }
+
+  hints.push(
+    "In Attio: Apps → recruiting-copilot → Settings → Gemini API key (research runs in Attio's cloud and does not read your local .env).",
+  );
+
+  return `Gemini authentication failed (${status}): ${hints.join(" ")}`;
 }
 
 export async function generateStructured<T extends z.ZodType>(
@@ -51,11 +101,11 @@ export async function generateStructured<T extends z.ZodType>(
 ): Promise<z.infer<T>> {
   const model = options.model ?? "gemini-2.5-flash";
   const responseJsonSchema = toGeminiJsonSchema(options.schema);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(client.apiKey)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: geminiAuthHeaders(client.apiKey),
     body: JSON.stringify({
       contents: [{ parts: [{ text: options.prompt }] }],
       generationConfig: {
@@ -66,7 +116,8 @@ export async function generateStructured<T extends z.ZodType>(
   });
 
   if (!response.ok) {
-    throw new Error(`Gemini request failed: ${response.status} ${await response.text()}`);
+    const body = await response.text();
+    throw new Error(formatGeminiAuthError(response.status, body));
   }
 
   const payload = (await response.json()) as {

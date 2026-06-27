@@ -8,12 +8,21 @@ describe("gemini client", () => {
   });
 
   it("createGeminiClient returns client handle", () => {
-    const client = createGeminiClient({ apiKey: "test-api-key" });
-    expect(client.apiKey).toBe("test-api-key");
+    const client = createGeminiClient({ apiKey: "AIzaSyTestKey" });
+    expect(client.apiKey).toBe("AIzaSyTestKey");
+  });
+
+  it("createGeminiClient accepts AI Studio auth keys (AQ.)", () => {
+    const client = createGeminiClient({ apiKey: "AQ.test-auth-key" });
+    expect(client.apiKey).toBe("AQ.test-auth-key");
+  });
+
+  it("createGeminiClient rejects OAuth access tokens", () => {
+    expect(() => createGeminiClient({ apiKey: "ya29.oauth-token" })).toThrow(/ya29/);
   });
 
   it("generateStructured parses valid JSON correctly", async () => {
-    const client = createGeminiClient({ apiKey: "test" });
+    const client = createGeminiClient({ apiKey: "AIzaSyTestKey" });
     const schema = z.object({ foo: z.string() });
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -30,7 +39,7 @@ describe("gemini client", () => {
   });
 
   it("generateStructured sends responseJsonSchema instead of legacy responseSchema", async () => {
-    const client = createGeminiClient({ apiKey: "test" });
+    const client = createGeminiClient({ apiKey: "AIzaSyTestKey" });
     const schema = z.object({ foo: z.string() });
     const fetchMock = vi.fn().mockResolvedValueOnce(
       new Response(
@@ -44,6 +53,9 @@ describe("gemini client", () => {
 
     await generateStructured(client, { prompt: "test prompt", schema });
 
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
+      "x-goog-api-key": "AIzaSyTestKey",
+    });
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(body.generationConfig.responseJsonSchema).toBeDefined();
     expect(body.generationConfig.responseSchema).toBeUndefined();
@@ -51,7 +63,7 @@ describe("gemini client", () => {
   });
 
   it("generateStructured throws on invalid JSON", async () => {
-    const client = createGeminiClient({ apiKey: "test" });
+    const client = createGeminiClient({ apiKey: "AIzaSyTestKey" });
     const schema = z.object({ foo: z.string() });
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -69,7 +81,7 @@ describe("gemini client", () => {
   });
 
   it("generateStructured throws when Gemini returns empty text", async () => {
-    const client = createGeminiClient({ apiKey: "test" });
+    const client = createGeminiClient({ apiKey: "AIzaSyTestKey" });
     const schema = z.object({ foo: z.string() });
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(

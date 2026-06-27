@@ -1,27 +1,22 @@
-import { LoadingState, Typography, useQuery } from "attio/client";
+import { LoadingState, Typography } from "attio/client";
 import { useEffect, useState } from "react";
-import getCandidateContext from "../graphql/get-candidate-context.graphql";
 import getAudioSummaryScript from "../server/get-audio-summary-script.server";
 import { PlayAudioSummaryButton } from "./single-audio-dialog";
-
-function readText(
-  value?: { __typename?: string; value?: string | null } | null,
-): string {
-  return value?.__typename === "TextValue" ? (value.value ?? "") : "";
-}
 
 export function PersonAudioSummary({
   recordId,
   savedScript,
+  storedScript,
 }: {
   recordId: string;
   savedScript?: string | null;
+  /** Audio script already loaded on the person record (e.g. from parent GraphQL query). */
+  storedScript?: string | null;
 }) {
-  const { person } = useQuery(getCandidateContext, { recordId });
   const [script, setScript] = useState("");
   const [resolving, setResolving] = useState(true);
 
-  const graphqlScript = readText(person?.audio_summary_script);
+  const graphqlScript = storedScript?.trim() ?? "";
   const overrideScript = savedScript?.trim() ?? "";
 
   useEffect(() => {

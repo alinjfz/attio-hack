@@ -253,10 +253,7 @@ export async function getPersonContext(
     roleTitle = extractTextValue(role.data?.values, "title");
   }
 
-  const name =
-    extractTextValue(values, "name") ??
-    extractTextValue(values, "full_name") ??
-    "Candidate";
+  const name = extractPersonName(values);
 
   return {
     recordId,
