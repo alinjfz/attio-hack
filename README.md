@@ -72,8 +72,8 @@ Copy `.env.example` to `.env` and fill in:
 | `SUPERLINKED_MODEL` | core | Embedding model | Default `BAAI/bge-m3` |
 | `GEMINI_API_KEY` | core | Draft generation | [Google AI Studio](https://aistudio.google.com) |
 | `GEMINI_MODEL` | core | LLM model | Default `gemini-2.5-flash` |
-| `TAVILY_API_KEY` | core | Web enrichment | [tavily.com](https://tavily.com) |
-| `ENABLE_TAVILY` | core | Feature flag | `true` to enrich thin CVs |
+| `TAVILY_API_KEY` | core | Web enrichment (optional) | [tavily.com](https://tavily.com) |
+| `ENABLE_TAVILY` | core | Feature flag — **`false` by default** | Set `true` only when you want web bullets (uses credits) |
 | `SLNG_API_KEY` | core | TTS audio | [app.slng.ai](https://app.slng.ai) |
 | `ENABLE_SLNG` | core | Feature flag | `true` for audio summary |
 | `WEBHOOK_SECRET` | api/ | n8n auth | Random string |
@@ -123,17 +123,21 @@ Docs: [Gemini API](https://ai.google.dev/gemini-api/docs)
 pnpm add @tavily/core --filter @recruiting-copilot/core
 ```
 
-Triggers when CV &lt; 500 chars or LinkedIn URL present with CV &lt; 1500 chars. Set `ENABLE_TAVILY=true`.
+Triggers when `ENABLE_TAVILY=true` **and** `TAVILY_API_KEY` is set. Off by default — Gemini-only research works without Tavily.
 
 Docs: [JS quickstart](https://docs.tavily.com/sdk/javascript/quick-start)
 
 ### n8n (workflow mirror)
 
-1. `pnpm api:dev` + ngrok
-2. Import [`n8n/recruiting-copilot.json`](n8n/recruiting-copilot.json)
-3. Set `API_PUBLIC_URL` and `WEBHOOK_SECRET` in n8n env
+Requires Docker for the recommended path:
 
-See [docs/N8N.md](docs/N8N.md).
+```bash
+pnpm api:dev      # webhook API :3001
+pnpm n8n:dev      # n8n UI :5678 via docker compose
+pnpm n8n:import   # import workflow
+```
+
+Without Docker: `pnpm n8n:dev:npx` and `pnpm n8n:import:npx`.
 
 ### SLNG (audio summary)
 

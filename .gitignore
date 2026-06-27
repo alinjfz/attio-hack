@@ -53,6 +53,7 @@ coverage/
 .vercel/
 .attio/
 lib/
+.n8n-data/
 
 # mine
 mydocs/

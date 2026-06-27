@@ -224,9 +224,26 @@ Copy `.env.example` → `.env`. Never commit `.env`.
 | `ATTIO_API_TOKEN` | api/ local; auto-injected in Attio server fns |
 | `SUPERLINKED_*` | core — cluster URL + API key required for scoring |
 | `GEMINI_API_KEY` | core — required for drafts |
-| `TAVILY_API_KEY` + `ENABLE_TAVILY` | core — optional enrichment |
+| `TAVILY_API_KEY` + `ENABLE_TAVILY` | core — **optional** web enrichment (off by default; Gemini-only works) |
 | `SLNG_API_KEY` + `ENABLE_SLNG` | core — optional audio |
 | `WEBHOOK_SECRET`, `PORT`, `API_PUBLIC_URL` | api/ + n8n |
+
+**Tavily is credit-limited and disabled by default.** Research runs on Superlinked + Gemini alone when `ENABLE_TAVILY=false` (recommended unless you need cited web bullets).
+
+### n8n local (Docker)
+
+```bash
+pnpm api:dev          # Terminal A — webhook API on :3001
+pnpm n8n:dev          # Terminal B — n8n UI on :5678 (Docker)
+pnpm n8n:dev:npx      # fallback without Docker
+pnpm n8n:import       # import workflow JSON
+```
+
+Data: `.n8n-data/` (gitignored). See [docs/N8N.md](docs/N8N.md).
+
+### SLNG agent skills
+
+Installed via `npx skills add slng-ai/skills --agent cursor` into `.agents/skills/` (see `skills-lock.json`). Includes `text-to-speech`, `setup-api-key`, etc.
 
 Attio server functions need the same keys configured in the **Attio developer dashboard** app secrets.
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   createGeminiClient,
   createSIEClient,
-  createTavilyClient,
+  createTavilyClientIfEnabled,
   patchPerson,
   createNote,
   buildHmNoteContent,
@@ -54,10 +54,7 @@ app.post("/webhook/research", async (c) => {
   const model = process.env.SUPERLINKED_MODEL ?? "BAAI/bge-m3";
   const sieClient = await createSIEClient({ clusterUrl, apiKey: superlinkedKey, model });
 
-  const tavilyClient =
-    process.env.ENABLE_TAVILY === "true" && process.env.TAVILY_API_KEY
-      ? createTavilyClient({ apiKey: process.env.TAVILY_API_KEY })
-      : undefined;
+  const tavilyClient = await createTavilyClientIfEnabled();
 
   const result = await runResearch(
     {

@@ -1,6 +1,7 @@
 import {
   createGeminiClient,
   generateListSummaryScript,
+  isSlngEnabled,
   textToSpeech,
 } from "@recruiting-copilot/core";
 
@@ -22,8 +23,8 @@ export interface SummarizeListResult {
 export default async function summarizeList(
   input: SummarizeListInput,
 ): Promise<SummarizeListResult> {
-  if (process.env.ENABLE_SLNG !== "true") {
-    throw new Error("SLNG audio summary is disabled. Set ENABLE_SLNG=true.");
+  if (!isSlngEnabled()) {
+    throw new Error("SLNG audio summary is disabled. Set ENABLE_SLNG=true and SLNG_API_KEY.");
   }
 
   const geminiKey = process.env.GEMINI_API_KEY;

@@ -5,6 +5,7 @@ import type { TavilyClientLike } from "../clients/tavily.js";
 describe("enrichCandidateContext", () => {
   it("returns merged Tavily context when enabled and CV is thin", async () => {
     process.env.ENABLE_TAVILY = "true";
+    process.env.TAVILY_API_KEY = "tvly-test-key";
 
     const client: TavilyClientLike = {
       search: vi.fn().mockResolvedValue({

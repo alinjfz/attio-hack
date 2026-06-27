@@ -9,7 +9,11 @@
     "dev": "pnpm --filter attio-app dev",
     "build": "pnpm -r build",
     "research:smoke": "pnpm --filter @recruiting-copilot/core research:smoke",
-    "api:dev": "pnpm --filter @recruiting-copilot/api dev"
+    "api:dev": "pnpm --filter @recruiting-copilot/api dev",
+    "n8n:dev": "docker compose up n8n",
+    "n8n:dev:npx": "N8N_USER_FOLDER=./.n8n-data N8N_PORT=5678 npx --yes n8n@latest start",
+    "n8n:import": "docker compose run --rm n8n n8n import:workflow --input=/import/recruiting-copilot.json",
+    "n8n:import:npx": "N8N_USER_FOLDER=./.n8n-data npx --yes n8n@latest import:workflow --input=n8n/recruiting-copilot.json"
   },
   "devDependencies": {
     "@types/node": "^24.0.4",

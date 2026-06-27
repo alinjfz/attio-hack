@@ -1,3 +1,4 @@
+export * from "./config/features.js";
 export * from "./schemas/draft-bundle.js";
 export * from "./schemas/fit-result.js";
 export * from "./schemas/research-input.js";

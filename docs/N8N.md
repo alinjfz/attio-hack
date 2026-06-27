@@ -14,19 +14,58 @@ Webhook (n8n) → POST api/webhook/research → packages/core runResearch() → 
 
 ## Setup
 
-1. Start the API server:
-   ```bash
-   pnpm api:dev
-   ```
-2. Expose it (demo):
-   ```bash
-   ngrok http 3001
-   ```
-3. Set environment variables in n8n:
-   - `API_PUBLIC_URL` — e.g. `https://abc123.ngrok.app`
-   - `WEBHOOK_SECRET` — same value as in `.env`
-4. Import [`recruiting-copilot.json`](../n8n/recruiting-copilot.json) into n8n.
-5. Activate the workflow and POST a test payload to the n8n webhook URL:
+### 1. Install dependencies (from repo root)
+
+```bash
+pnpm install   # project deps (n8n runs via Docker or npx — not bundled in node_modules)
+```
+
+### 2. Start local services
+
+Terminal A — webhook API (uses `packages/core`, respects `ENABLE_TAVILY=false`):
+
+```bash
+pnpm api:dev
+```
+
+Terminal B — n8n UI (requires [Docker](https://docs.docker.com/get-docker/)):
+
+```bash
+pnpm n8n:dev
+```
+
+No Docker? Use the npx fallback (downloads n8n on first run):
+
+```bash
+pnpm n8n:dev:npx
+```
+
+Open **http://localhost:5678** (first run creates a local owner account). Workflow data is stored in `.n8n-data/` (gitignored).
+
+Import the workflow:
+
+```bash
+pnpm n8n:import
+```
+
+Or import manually in the n8n UI: **Workflows → Import from file** → `n8n/recruiting-copilot.json`.
+
+### 3. Configure n8n environment
+
+In n8n **Settings → Variables** (or workflow node URLs):
+
+| Variable | Example |
+|----------|---------|
+| `API_PUBLIC_URL` | `http://localhost:3001` |
+| `WEBHOOK_SECRET` | same as `.env` |
+
+For a public demo, expose the API:
+
+```bash
+ngrok http 3001
+```
+
+### 4. Activate and test
 
 ```json
 {

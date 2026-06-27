@@ -2,7 +2,7 @@ import { ATTIO_API_TOKEN } from "attio/server";
 import {
   createGeminiClient,
   createSIEClient,
-  createTavilyClient,
+  createTavilyClientIfEnabled,
   getPersonContext,
   type ResearchResult,
   runResearch,
@@ -37,10 +37,7 @@ export default async function researchCandidate(recordId: string): Promise<Resea
     model,
   });
 
-  const tavilyClient =
-    process.env.ENABLE_TAVILY === "true" && process.env.TAVILY_API_KEY
-      ? createTavilyClient({ apiKey: process.env.TAVILY_API_KEY })
-      : undefined;
+  const tavilyClient = await createTavilyClientIfEnabled();
 
   return runResearch(
     {

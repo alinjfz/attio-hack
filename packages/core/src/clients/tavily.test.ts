@@ -6,6 +6,7 @@ describe("shouldEnrich", () => {
 
   beforeEach(() => {
     process.env.ENABLE_TAVILY = "true";
+    process.env.TAVILY_API_KEY = "tvly-test-key";
   });
 
   afterEach(() => {
@@ -19,6 +20,12 @@ describe("shouldEnrich", () => {
   it("returns true when LinkedIn present and CV under 1500 chars", () => {
     const cv = "x".repeat(1000);
     expect(shouldEnrich(cv, "https://linkedin.com/in/alex")).toBe(true);
+  });
+
+  it("returns false when flag on but API key missing", () => {
+    process.env.ENABLE_TAVILY = "true";
+    process.env.TAVILY_API_KEY = "  ";
+    expect(shouldEnrich("short", undefined)).toBe(false);
   });
 
   it("returns false when feature flag disabled", () => {

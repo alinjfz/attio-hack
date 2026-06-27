@@ -1,4 +1,5 @@
 import { tavily } from "@tavily/core";
+import { isTavilyEnabled } from "../config/features.js";
 import type { EnrichmentContext } from "../schemas/research-input.js";
 
 export interface TavilyConfig {
@@ -23,11 +24,14 @@ export interface TavilyClientLike {
 }
 
 export function createTavilyClient(config: TavilyConfig): TavilyClientLike {
+  if (!config.apiKey?.trim()) {
+    throw new Error("TAVILY_API_KEY is required when ENABLE_TAVILY=true");
+  }
   return tavily({ apiKey: config.apiKey });
 }
 
 export function shouldEnrich(cvText: string, linkedinUrl?: string): boolean {
-  if (process.env.ENABLE_TAVILY !== "true") {
+  if (!isTavilyEnabled()) {
     return false;
   }
   if (cvText.length < 500) {

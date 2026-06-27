@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-prompt": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "agent-prompt/SKILL.md",
+      "computedHash": "ef22d34fac147e3f6465ef7923523833070972273d57b2f0b085bdc70fd71cb3"
+    },
+    "agents": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "agents/SKILL.md",
+      "computedHash": "6af371fb3f483b2953896fd6a0e7956a242e99c91398cce50b40bf5608126389"
+    },
+    "custom-migration": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "custom-migration/SKILL.md",
+      "computedHash": "7600d9bee9d0126c092073a4de3d59b985031e004ec8a6f2d8b680330aea1c06"
+    },
+    "livekit-migration": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "livekit-migration/SKILL.md",
+      "computedHash": "ce7209310c1e53f3635edde8aca83e24f504e937b61af841e8bbd04bd2629958"
+    },
+    "pipecat-migration": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "pipecat-migration/SKILL.md",
+      "computedHash": "8340107cb705693b133f1dd06ef8fbb8727401796acb85ad8f2fc1b4528c4e5d"
+    },
+    "setup-api-key": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "setup-api-key/SKILL.md",
+      "computedHash": "3c7c563b6ca0304046b9c2c4e5510a8d04565ec882e5b5a9fc68e8262075cc09"
+    },
+    "speech-to-text": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "speech-to-text/SKILL.md",
+      "computedHash": "54cf22d3bdbd5af16ccdf1f4d7564e3258e39aa54f1b20e717bae6373282f1a7"
+    },
+    "text-to-speech": {
+      "source": "slng-ai/skills",
+      "sourceType": "github",
+      "skillPath": "text-to-speech/SKILL.md",
+      "computedHash": "47b04f45b985e3bb170d8b1ce36df9cbd6ae75ef16ada2bbba72b927ed9c7f3b"
+    }
+  }
+}
