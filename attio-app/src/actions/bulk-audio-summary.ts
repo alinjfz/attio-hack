@@ -1,6 +1,6 @@
 import type { App } from "attio";
 import { alert, showToast } from "attio/client";
-import summarizeCandidateAudio from "../server/summarize-candidate-audio.server";
+import previewCandidateAudio from "../server/preview-candidate-audio.server";
 import { openAudioPlaylistDialog } from "../record/audio-playlist-flow";
 
 const MAX_BULK = 10;
@@ -8,12 +8,12 @@ const MAX_BULK = 10;
 export const bulkAudioSummaryAction: App.Record.BulkAction = {
   id: "bulk-audio-summary",
   label: "Listen to candidates (SLNG)",
-  icon: "Microphone",
+  icon: "Search",
   objects: ["people"],
-  onTrigger: async ({ runRecordBatches, recordIds }) => {
+  onTrigger: async ({ runRecordBatches }) => {
     let processed = 0;
     let limitAlerted = false;
-    const segments: Awaited<ReturnType<typeof summarizeCandidateAudio>>[] = [];
+    const segments: Awaited<ReturnType<typeof previewCandidateAudio>>[] = [];
 
     const outcome = await runRecordBatches(
       {
@@ -28,16 +28,16 @@ export const bulkAudioSummaryAction: App.Record.BulkAction = {
           }
           return {
             title: "SLNG batch audio",
-            text: `Reading up to ${Math.min(totalRecords, MAX_BULK)} candidates one by one…`,
+            text: `Preparing up to ${Math.min(totalRecords, MAX_BULK)} scripts…`,
           };
         },
         onProgress: ({ processedRecords, totalRecords }) => ({
           title: "SLNG batch audio",
-          text: `Generated ${processedRecords}/${Math.min(totalRecords, MAX_BULK)} audio clips…`,
+          text: `Prepared ${processedRecords}/${Math.min(totalRecords, MAX_BULK)} scripts…`,
         }),
         onComplete: () => ({
-          title: "Audio ready",
-          text: "Opening playlist — candidates play one by one.",
+          title: "Scripts ready",
+          text: "Opening playlist — audio loads one candidate at a time.",
           variant: "success",
         }),
         onError: (_context, error) => ({
@@ -62,7 +62,7 @@ export const bulkAudioSummaryAction: App.Record.BulkAction = {
         processed += 1;
 
         try {
-          const segment = await summarizeCandidateAudio(recordId);
+          const segment = await previewCandidateAudio(recordId);
           segments.push(segment);
           return segment;
         } catch (error) {
@@ -77,12 +77,13 @@ export const bulkAudioSummaryAction: App.Record.BulkAction = {
     );
 
     if (segments.length === 0) {
+      const message =
+        !outcome.success && outcome.error instanceof Error
+          ? outcome.error.message
+          : "No candidate scripts were generated. Research candidates first.";
       await showToast({
         title: "Batch audio failed",
-        text:
-          outcome.error instanceof Error
-            ? outcome.error.message
-            : "No candidate audio was generated. Research candidates first.",
+        text: message,
         variant: "error",
       });
       return;

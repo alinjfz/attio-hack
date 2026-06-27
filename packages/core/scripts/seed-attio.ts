@@ -208,6 +208,7 @@ async function ensureSchema(roleObjectSlug: string): Promise<void> {
     { title: "LinkedIn URL", api_slug: "linkedin_url", type: "text" },
     { title: "Fit score", api_slug: "fit_score", type: "number" },
     { title: "2-line summary", api_slug: "two_liner", type: "text" },
+    { title: "Audio summary script", api_slug: "audio_summary_script", type: "text" },
     {
       title: "Role",
       api_slug: "role",

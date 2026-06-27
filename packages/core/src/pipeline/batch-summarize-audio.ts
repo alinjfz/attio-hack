@@ -1,5 +1,4 @@
 import type { GeminiClientLike } from "../clients/gemini.js";
-import { textToSpeech } from "../clients/slng.js";
 import {
   generateCandidateReadAloudScript,
   type ListCandidateSummary,
@@ -9,28 +8,31 @@ export interface BatchCandidateSummary extends ListCandidateSummary {
   recordId?: string;
 }
 
-export interface AudioSegment {
+/** Script + metadata only — audio is synthesized in a separate server call. */
+export interface AudioSegmentPreview {
   recordId?: string;
   name: string;
   fitScore: number;
   fitTier: string;
   script: string;
+}
+
+export interface AudioSegment extends AudioSegmentPreview {
   audioBase64: string;
   contentType: string;
 }
 
-export interface BatchSummarizeAudioDeps {
+export interface BatchScriptDeps {
   geminiClient: GeminiClientLike;
   geminiModel?: string;
-  slngApiKey: string;
 }
 
-export async function batchSummarizeAudio(
+export async function batchGenerateAudioScripts(
   candidates: BatchCandidateSummary[],
-  deps: BatchSummarizeAudioDeps,
-): Promise<AudioSegment[]> {
+  deps: BatchScriptDeps,
+): Promise<AudioSegmentPreview[]> {
   const sorted = [...candidates].sort((a, b) => b.fitScore - a.fitScore);
-  const segments: AudioSegment[] = [];
+  const segments: AudioSegmentPreview[] = [];
 
   for (let index = 0; index < sorted.length; index++) {
     const candidate = sorted[index]!;
@@ -42,18 +44,40 @@ export async function batchSummarizeAudio(
       deps.geminiModel,
     );
 
-    const audio = await textToSpeech(script, { apiKey: deps.slngApiKey });
-
     segments.push({
       recordId: candidate.recordId,
       name: candidate.name,
       fitScore: candidate.fitScore,
       fitTier: candidate.fitTier,
       script,
-      audioBase64: audio.audioBase64,
-      contentType: audio.contentType,
     });
   }
 
   return segments;
+}
+
+export async function summarizeCandidatesFromRecordIds(
+  recordIds: string[],
+  deps: BatchScriptDeps & {
+    fetchSummary: (recordId: string) => Promise<BatchCandidateSummary | null>;
+    maxCandidates?: number;
+  },
+): Promise<AudioSegmentPreview[]> {
+  const uniqueIds = [...new Set(recordIds)].slice(0, deps.maxCandidates ?? 10);
+  const candidates: BatchCandidateSummary[] = [];
+
+  for (const recordId of uniqueIds) {
+    const summary = await deps.fetchSummary(recordId);
+    if (summary) {
+      candidates.push(summary);
+    }
+  }
+
+  if (candidates.length === 0) {
+    throw new Error(
+      "No researched candidates found. Run research first so fit_score and fit_tier are set.",
+    );
+  }
+
+  return batchGenerateAudioScripts(candidates, deps);
 }

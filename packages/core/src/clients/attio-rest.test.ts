@@ -38,6 +38,7 @@ describe("attio-rest payload builders", () => {
 
   it("combines HM note with pros and cons", () => {
     const content = buildHmNoteContent("Great fit.", ["TypeScript"], ["No Attio"]);
+    expect(content).toContain("## HM summary");
     expect(content).toContain("Great fit.");
     expect(content).toContain("- TypeScript");
     expect(content).toContain("- No Attio");
@@ -45,7 +46,7 @@ describe("attio-rest payload builders", () => {
 
   it("builds rejection and silver medalist note content", () => {
     expect(buildRejectionEmailNoteContent("Thanks for applying.")).toContain(
-      "Thanks for applying.",
+      "## Rejection email draft",
     );
     expect(
       buildSilverMedalistNoteContent({

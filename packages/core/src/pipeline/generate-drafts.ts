@@ -49,10 +49,10 @@ export function buildDraftPrompt(input: GenerateDraftsInput): string {
     "- twoLiner: concise 2-line candidate headline",
     "- fitReasoning: pros and cons vs the role",
     "- gapAnalysis: missing skills/seniority/location with severity",
-    "- hmNote: internal hiring manager note in markdown-friendly prose",
-    "- clientSubmittalDraft: client-facing submittal email draft",
-    "- candidateEmailDraft: optional outreach/update email draft",
-    "- rejectionEmailDraft: polite personalised rejection email for this role (not sent automatically)",
+    "- hmNote: internal hiring manager note in markdown-friendly prose with blank lines between paragraphs",
+    "- clientSubmittalDraft: client-facing submittal email draft with greeting, body paragraphs, and sign-off separated by blank lines",
+    "- candidateEmailDraft: optional outreach/update email draft with clear paragraph breaks",
+    "- rejectionEmailDraft: polite personalised rejection email for this role with greeting, reason paragraphs, and warm closing — not sent automatically",
     "- webBullets: research highlights; include source URLs when available",
   ].join("\n");
 }

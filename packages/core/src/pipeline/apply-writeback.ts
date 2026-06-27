@@ -8,7 +8,6 @@ import {
   type AttioRestConfig,
 } from "../clients/attio-rest.js";
 import type { GeminiClientLike } from "../clients/gemini.js";
-import { textToSpeech } from "../clients/slng.js";
 import type { DraftBundle } from "../schemas/draft-bundle.js";
 import type { FitResult } from "../schemas/fit-result.js";
 import type { WritebackMode, WritebackOptions } from "../schemas/writeback-options.js";
@@ -27,8 +26,6 @@ export interface ApplyWritebackInput {
 export interface ApplyWritebackResult {
   audioSummary?: {
     script: string;
-    audioBase64: string;
-    contentType: string;
   };
 }
 
@@ -93,7 +90,6 @@ export async function applyWriteback(
 
   if (
     input.options.createSlngSummary &&
-    deps.slngApiKey &&
     deps.geminiClient
   ) {
     const script = await generateListSummaryScript(
@@ -109,19 +105,21 @@ export async function applyWriteback(
       deps.geminiModel,
     );
 
-    const audio = await textToSpeech(script, { apiKey: deps.slngApiKey });
-
     await createNote(deps.attioConfig, {
       recordId: input.recordId,
       title: "Audio summary script (SLNG)",
       content: buildAudioSummaryNoteContent(script),
     });
 
-    result.audioSummary = {
-      script,
-      audioBase64: audio.audioBase64,
-      contentType: audio.contentType,
-    };
+    try {
+      await patchPerson(deps.attioConfig, input.recordId, {
+        audioSummaryScript: script,
+      });
+    } catch {
+      // Optional field — run pnpm seed:attio if missing.
+    }
+
+    result.audioSummary = { script };
   }
 
   return result;

@@ -1,25 +1,63 @@
-import { Button, Section, TextBlock } from "attio/client";
+import { Button, LoadingState, Section, TextBlock, showToast } from "attio/client";
 import { useEffect, useRef, useState } from "react";
-import type { AudioSegment } from "../server/batch-summarize-audio.server";
+import type { AudioSegmentPreview } from "@recruiting-copilot/core/pipeline/batch-summarize-audio";
+import synthesizeAudio from "../server/synthesize-audio.server";
 
 export function AudioPlaylistDialog({
   hideDialog,
   segments,
 }: {
   hideDialog: () => void;
-  segments: AudioSegment[];
+  segments: AudioSegmentPreview[];
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [loadingAudio, setLoadingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const current = segments[currentIndex];
-  const audioSrc = current
-    ? `data:${current.contentType};base64,${current.audioBase64}`
-    : null;
+
+  useEffect(() => {
+    if (!current?.script) {
+      setAudioSrc(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingAudio(true);
+    setAudioSrc(null);
+
+    void synthesizeAudio(current.script)
+      .then((audio) => {
+        if (cancelled) {
+          return;
+        }
+        setAudioSrc(`data:${audio.contentType};base64,${audio.audioBase64}`);
+      })
+      .catch(async (error) => {
+        if (cancelled) {
+          return;
+        }
+        await showToast({
+          title: "Audio synthesis failed",
+          text: error instanceof Error ? error.message : "Unknown error",
+          variant: "error",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingAudio(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [current?.script]);
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !audioSrc) {
+    if (!audio || !audioSrc || loadingAudio) {
       return;
     }
 
@@ -27,7 +65,7 @@ export function AudioPlaylistDialog({
     void audio.play().catch(() => {
       // Autoplay may be blocked until the user interacts.
     });
-  }, [audioSrc]);
+  }, [audioSrc, loadingAudio]);
 
   const handleEnded = () => {
     if (currentIndex < segments.length - 1) {
@@ -56,20 +94,13 @@ export function AudioPlaylistDialog({
         <TextBlock>{current.script}</TextBlock>
       </Section>
 
-      {audioSrc && (
-        <audio
-          ref={audioRef}
-          controls
-          src={audioSrc}
-          onEnded={handleEnded}
-        />
+      {loadingAudio && <LoadingState />}
+
+      {audioSrc && !loadingAudio && (
+        <audio ref={audioRef} controls src={audioSrc} onEnded={handleEnded} />
       )}
 
-      <Button
-        label="Previous"
-        onClick={handlePrevious}
-        disabled={currentIndex === 0}
-      />
+      <Button label="Previous" onClick={handlePrevious} disabled={currentIndex === 0} />
       <Button
         label="Next"
         onClick={handleNext}

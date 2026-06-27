@@ -1,5 +1,6 @@
 import { readEnv } from "../config/env.js";
 import type { FitTier } from "../schemas/fit-result.js";
+import { formatDraftForNote } from "../utils/format-prose.js";
 
 export const FIT_TIER_OPTION_TITLES: readonly FitTier[] = [
   "Strong",
@@ -257,6 +258,7 @@ export interface PatchPersonValues {
   fitTier?: string;
   twoLiner?: string;
   cvText?: string;
+  audioSummaryScript?: string;
 }
 
 export interface CreateNoteInput {
@@ -405,6 +407,9 @@ export function buildPatchPersonPayload(values: PatchPersonValues): {
   if (values.cvText !== undefined) {
     attioValues.cv_text = [{ value: values.cvText }];
   }
+  if (values.audioSummaryScript !== undefined) {
+    attioValues.audio_summary_script = [{ value: values.audioSummaryScript }];
+  }
 
   return { data: { values: attioValues } };
 }
@@ -492,26 +497,26 @@ export function buildHmNoteContent(
   cons: string[],
 ): string {
   const sections = [
-    hmNote,
+    formatDraftForNote("HM summary", hmNote),
     "",
     "## Fit reasoning",
     "",
     "### Pros",
-    ...pros.map((pro) => `- ${pro}`),
+    ...(pros.length > 0 ? pros.map((pro) => `- ${pro}`) : ["- None listed."]),
     "",
     "### Cons",
-    ...cons.map((con) => `- ${con}`),
+    ...(cons.length > 0 ? cons.map((con) => `- ${con}`) : ["- None listed."]),
   ];
 
   return sections.join("\n");
 }
 
 export function buildRejectionEmailNoteContent(rejectionEmailDraft: string): string {
-  return [
-    "Draft only — nothing was sent automatically.",
-    "",
+  return formatDraftForNote(
+    "Rejection email draft",
     rejectionEmailDraft,
-  ].join("\n");
+    "_Draft only — nothing was sent automatically._",
+  );
 }
 
 export function buildSilverMedalistNoteContent(input: {
@@ -541,5 +546,13 @@ export function buildSilverMedalistNoteContent(input: {
 }
 
 export function buildAudioSummaryNoteContent(script: string): string {
-  return ["Spoken summary script (SLNG):", "", script].join("\n");
+  return [
+    formatDraftForNote("Spoken summary script", script),
+    "",
+    "## Listen",
+    "",
+    "Open **Recruiting Copilot** on this person and tap **Play audio summary** to hear the clip.",
+    "",
+    "_The script is also saved on the person record for replay._",
+  ].join("\n");
 }

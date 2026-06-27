@@ -1,7 +1,7 @@
 import type { App } from "attio";
 import { Button, Section, Typography, showToast } from "attio/client";
 import { useState } from "react";
-import { batchSummarizeRecruitingList } from "../server/batch-summarize-audio.server";
+import summarizeRecruitingListAudio from "../server/summarize-recruiting-list-audio.server";
 import { openAudioPlaylistDialog } from "./audio-playlist-flow";
 
 function AudioSummaryPanel({ recordId }: { recordId: string }) {
@@ -11,14 +11,14 @@ function AudioSummaryPanel({ recordId }: { recordId: string }) {
   const handleListenToList = async () => {
     setLoading(true);
     try {
-      const segments = await batchSummarizeRecruitingList();
+      const segments = await summarizeRecruitingListAudio();
       await openAudioPlaylistDialog({
         title: "Recruiting list audio",
         segments,
       });
       await showToast({
-        title: "Audio ready",
-        text: `${segments.length} candidates — plays one by one, highest fit first.`,
+        title: "Scripts ready",
+        text: `${segments.length} candidates — audio loads one by one, highest fit first.`,
         variant: "success",
       });
     } catch (error) {
@@ -35,12 +35,12 @@ function AudioSummaryPanel({ recordId }: { recordId: string }) {
   return (
     <Section title="List audio summary (SLNG)">
       <Typography.Body>
-        Read every researched candidate on the recruiting list aloud, one by one,
-        sorted by fit score. Requires enable_slng and slng_api_key in app settings.
-        Or select people on a list and use bulk action “Listen to candidates (SLNG)”.
+        Prepare spoken summaries for every researched candidate on the recruiting list.
+        Audio is generated one candidate at a time to keep responses fast. Requires
+        enable_slng and slng_api_key in app settings.
       </Typography.Body>
       <Button
-        label={loading ? "Generating audio…" : "Listen to recruiting list"}
+        label={loading ? "Preparing scripts…" : "Listen to recruiting list"}
         onClick={handleListenToList}
         disabled={loading}
       />

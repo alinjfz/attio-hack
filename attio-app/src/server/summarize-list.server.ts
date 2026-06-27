@@ -1,5 +1,4 @@
 import { createGeminiClient } from "@recruiting-copilot/core/clients/gemini";
-import { textToSpeech } from "@recruiting-copilot/core/clients/slng";
 import { isSlngEnabled } from "@recruiting-copilot/core/config/features";
 import { generateListSummaryScript } from "@recruiting-copilot/core/pipeline/summarize-list";
 import { readRuntimeEnv, readRuntimeEnvFlag } from "./runtime-env";
@@ -15,8 +14,6 @@ export interface SummarizeListInput {
 
 export interface SummarizeListResult {
   script: string;
-  audioBase64: string;
-  contentType: string;
 }
 
 export default async function summarizeList(
@@ -33,9 +30,6 @@ export default async function summarizeList(
   if (!geminiKey) {
     throw new Error("Missing gemini_api_key in app settings.");
   }
-  if (!slngKey) {
-    throw new Error("Missing slng_api_key in app settings.");
-  }
 
   const topCandidates = input.candidates
     .sort((a, b) => b.fitScore - a.fitScore)
@@ -51,11 +45,5 @@ export default async function summarizeList(
     await readRuntimeEnv("GEMINI_MODEL"),
   );
 
-  const audio = await textToSpeech(script, { apiKey: slngKey });
-
-  return {
-    script,
-    audioBase64: audio.audioBase64,
-    contentType: audio.contentType,
-  };
+  return { script };
 }

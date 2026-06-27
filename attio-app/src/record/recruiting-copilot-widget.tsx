@@ -18,6 +18,7 @@ import researchCandidate from "../server/research-candidate.server";
 import { BundlePreview } from "./bundle-preview";
 import draftRejection from "../server/draft-rejection.server";
 import { openApprovalDialog } from "./research-flow";
+import { openSingleAudioDialog } from "./audio-playlist-flow";
 import { TierBadge } from "./tier-badge";
 
 function readText(
@@ -81,6 +82,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
   const fitScore = readNumber(person?.fit_score);
   const fitTier = readTier(person?.fit_tier);
   const twoLiner = readText(person?.two_liner);
+  const audioSummaryScript = readText(person?.audio_summary_script);
   const roleContext = readRoleContext(person?.role);
   const hasRole = !!roleContext.roleRecordId;
 
@@ -179,6 +181,16 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
     }
   };
 
+  const handlePlayAudioSummary = async () => {
+    if (!audioSummaryScript) {
+      return;
+    }
+    await openSingleAudioDialog({
+      script: audioSummaryScript,
+      candidateName,
+    });
+  };
+
   return (
     <>
       <Widget.TextWidget>
@@ -216,6 +228,14 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         onClick={handleDraftRejection}
         disabled={researching || draftingRejection}
       />
+
+      {audioSummaryScript && (
+        <Button
+          label="Play audio summary"
+          onClick={handlePlayAudioSummary}
+          disabled={researching || draftingRejection}
+        />
+      )}
 
       {preview && <BundlePreview fit={preview.fit} bundle={preview.bundle} />}
     </>

@@ -13,8 +13,9 @@ import {
   DEFAULT_REJECT_OPTIONS,
   type WritebackOptions,
 } from "@recruiting-copilot/core/schemas/writeback-options";
-import { useState } from "react";
 import applyWritebackServer from "../server/apply-writeback.server";
+import { openSingleAudioDialog } from "./audio-playlist-flow";
+import { DraftTextBlock } from "./format-prose";
 import { TierBadge } from "./tier-badge";
 
 export interface ApprovalDialogProps {
@@ -61,13 +62,12 @@ export function ApprovalDialog({
   initialOptions,
   focus = "review",
 }: ApprovalDialogProps) {
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const defaultOptions =
     focus === "rejection"
       ? { ...DEFAULT_REJECT_OPTIONS, ...initialOptions }
       : { ...DEFAULT_APPROVE_OPTIONS, ...initialOptions };
 
-  const { Form, TextArea, SubmitButton, Checkbox, WithState } = useForm(
+  const { Form, TextArea, SubmitButton, Toggle, InputGroup, WithState } = useForm(
     {
       twoLiner: Forms.string().multiline(),
       hmNote: Forms.string().multiline(),
@@ -88,7 +88,7 @@ export function ApprovalDialog({
     },
   );
 
-  const runWriteback = async (
+  const finishWriteback = async (
     mode: "approve" | "reject",
     values: {
       twoLiner: string;
@@ -99,32 +99,41 @@ export function ApprovalDialog({
       createRejectionEmail: boolean;
       markPotentialCandidateLater: boolean;
     },
+    successTitle: string,
+    successText: string,
   ) => {
-    const options = buildOptions(values);
-    const updatedBundle: DraftBundle = {
-      ...bundle,
-      twoLiner: values.twoLiner,
-      hmNote: values.hmNote,
-      rejectionEmailDraft: values.rejectionEmailDraft,
-    };
-
     const result = await applyWritebackServer({
       recordId,
       candidateName,
       fit,
-      bundle: updatedBundle,
+      bundle: {
+        ...bundle,
+        twoLiner: values.twoLiner,
+        hmNote: values.hmNote,
+        rejectionEmailDraft: values.rejectionEmailDraft,
+      },
       mode,
-      options,
+      options: buildOptions(values),
       roleTitle,
     });
 
-    if (result.audioSummary) {
-      setAudioSrc(
-        `data:${result.audioSummary.contentType};base64,${result.audioSummary.audioBase64}`,
-      );
-    }
+    await showToast({
+      title: successTitle,
+      text: result.audioSummary
+        ? `${successText} Opening audio player…`
+        : successText,
+      variant: "success",
+    });
 
-    return result;
+    onApproved?.();
+    hideDialog();
+
+    if (result.audioSummary?.script) {
+      await openSingleAudioDialog({
+        script: result.audioSummary.script,
+        candidateName,
+      });
+    }
   };
 
   const handleApprove = async (values: {
@@ -137,18 +146,12 @@ export function ApprovalDialog({
     markPotentialCandidateLater: boolean;
   }) => {
     try {
-      const result = await runWriteback("approve", values);
-      await showToast({
-        title: "Approved",
-        text: result.audioSummary
-          ? "Fit fields and selected outputs written. Audio summary ready below."
-          : "Fit fields and selected outputs written to Attio.",
-        variant: "success",
-      });
-      if (!result.audioSummary) {
-        onApproved?.();
-        hideDialog();
-      }
+      await finishWriteback(
+        "approve",
+        values,
+        "Approved",
+        "Fit fields and selected outputs written to Attio.",
+      );
     } catch (error) {
       await showToast({
         title: "Write-back failed",
@@ -168,18 +171,12 @@ export function ApprovalDialog({
     markPotentialCandidateLater: boolean;
   }) => {
     try {
-      const result = await runWriteback("reject", values);
-      await showToast({
-        title: "Rejected for this role",
-        text: result.audioSummary
-          ? "Selected outputs logged. Audio summary ready below."
-          : "Selected outputs logged to Attio notes.",
-        variant: "success",
-      });
-      if (!result.audioSummary) {
-        onApproved?.();
-        hideDialog();
-      }
+      await finishWriteback(
+        "reject",
+        values,
+        "Rejected for this role",
+        "Selected outputs logged to Attio notes.",
+      );
     } catch (error) {
       await showToast({
         title: "Rejection write-back failed",
@@ -194,16 +191,16 @@ export function ApprovalDialog({
       ? "No major gaps flagged."
       : bundle.gapAnalysis
           .map((gap) => `[${gap.severity}] ${gap.area}: ${gap.gap}`)
-          .join("\n");
+          .join("\n\n");
 
   const webLines =
     bundle.webBullets.length === 0
       ? ""
       : bundle.webBullets
           .map((bullet) =>
-            bullet.source ? `• ${bullet.text} (${bullet.source})` : `• ${bullet.text}`,
+            bullet.source ? `• ${bullet.text}\n  ${bullet.source}` : `• ${bullet.text}`,
           )
-          .join("\n");
+          .join("\n\n");
 
   return (
     <Form onSubmit={handleApprove}>
@@ -219,11 +216,11 @@ export function ApprovalDialog({
         <>
           <Section title="Fit reasoning">
             <TextBlock>
-              Pros{"\n"}
+              {"Pros\n"}
               {formatBullets(bundle.fitReasoning?.pros ?? [])}
             </TextBlock>
             <TextBlock>
-              Cons{"\n"}
+              {"Cons\n"}
               {formatBullets(bundle.fitReasoning?.cons ?? [])}
             </TextBlock>
           </Section>
@@ -247,11 +244,11 @@ export function ApprovalDialog({
       {focus === "review" && (
         <>
           <Section title="Client submittal draft">
-            <TextBlock>{bundle.clientSubmittalDraft || "No submittal draft generated."}</TextBlock>
+            <DraftTextBlock text={bundle.clientSubmittalDraft} />
           </Section>
 
           <Section title="Candidate email draft">
-            <TextBlock>{bundle.candidateEmailDraft || "No candidate email draft generated."}</TextBlock>
+            <DraftTextBlock text={bundle.candidateEmailDraft} />
           </Section>
 
           {webLines && (
@@ -263,27 +260,16 @@ export function ApprovalDialog({
       )}
 
       <Section title="Output options">
-        <Checkbox label="Create note for HM" name="createHmNote" />
-        <Checkbox label="Create a summary with SLNG" name="createSlngSummary" />
-        <Checkbox label="Create a rejection email with reason" name="createRejectionEmail" />
-        <Checkbox
-          label="Mark as potential candidate for later (reject for this role)"
-          name="markPotentialCandidateLater"
-        />
-      </Section>
-
-      {audioSrc && (
-        <Section title="SLNG audio summary">
-          <audio controls src={audioSrc} />
-          <Button
-            label="Done"
-            onClick={() => {
-              onApproved?.();
-              hideDialog();
-            }}
+        <InputGroup>
+          <Toggle label="Create note for HM" name="createHmNote" />
+          <Toggle label="Create a summary with SLNG" name="createSlngSummary" />
+          <Toggle label="Create a rejection email with reason" name="createRejectionEmail" />
+          <Toggle
+            label="Mark as potential candidate for later (reject for this role)"
+            name="markPotentialCandidateLater"
           />
-        </Section>
-      )}
+        </InputGroup>
+      </Section>
 
       <WithState submitting values>
         {({ submitting, values }) => (

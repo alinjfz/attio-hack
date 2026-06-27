@@ -55,5 +55,11 @@ query GetCandidateContext($recordId: String!) {
         value
       }
     }
+    audio_summary_script: attribute(slug: "audio_summary_script") {
+      __typename
+      ... on TextValue {
+        value
+      }
+    }
   }
 }

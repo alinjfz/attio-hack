@@ -479,6 +479,30 @@ declare module "./get-candidate-context.graphql" {
         | { __typename: "ActorReferenceValue" }
         | { __typename: "MultiActorReferenceValue" }
         | null;
+      audio_summary_script:
+        | { __typename: "RecordReferenceValue" }
+        | { __typename: "MultiRecordReferenceValue" }
+        | { __typename: "PersonalNameValue" }
+        | { __typename: "TextValue"; value: string | null }
+        | { __typename: "DateValue" }
+        | { __typename: "TimestampValue" }
+        | { __typename: "NumberValue" }
+        | { __typename: "MultiEmailAddressValue" }
+        | { __typename: "DomainValue" }
+        | { __typename: "MultiDomainValue" }
+        | { __typename: "LocationValue" }
+        | { __typename: "InteractionValue" }
+        | { __typename: "SelectValue" }
+        | { __typename: "MultiSelectValue" }
+        | { __typename: "StatusValue" }
+        | { __typename: "CheckboxValue" }
+        | { __typename: "RatingValue" }
+        | { __typename: "PhoneNumberValue" }
+        | { __typename: "MultiPhoneNumberValue" }
+        | { __typename: "CurrencyValue" }
+        | { __typename: "ActorReferenceValue" }
+        | { __typename: "MultiActorReferenceValue" }
+        | null;
     } | null;
   };
 

@@ -8,13 +8,14 @@ export interface TextToSpeechResult {
   contentType: string;
 }
 
+const DEFAULT_TTS_ENDPOINT = "https://api.slng.ai/v1/tts/slng/deepgram/aura:2";
+const DEFAULT_TTS_VOICE = "aura-2-thalia-en";
+
 export async function textToSpeech(
   text: string,
   config: SlngConfig,
 ): Promise<TextToSpeechResult> {
-  const endpoint =
-    config.endpoint ??
-    "https://api.slng.ai/v1/tts/slng/deepgram/aura:2-en";
+  const endpoint = config.endpoint ?? DEFAULT_TTS_ENDPOINT;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -23,8 +24,8 @@ export async function textToSpeech(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "aura-2-thalia-en",
       text,
+      model: DEFAULT_TTS_VOICE,
     }),
   });
 

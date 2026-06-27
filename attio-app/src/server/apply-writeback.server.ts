@@ -23,8 +23,6 @@ export interface ApplyWritebackServerInput {
 export interface ApplyWritebackServerResult {
   audioSummary?: {
     script: string;
-    audioBase64: string;
-    contentType: string;
   };
 }
 
@@ -50,7 +48,6 @@ export default async function applyWritebackServer(
 
   return applyWriteback(input, {
     attioConfig: { apiToken: ATTIO_API_TOKEN },
-    slngApiKey: slngKey,
     geminiClient: geminiKey ? createGeminiClient({ apiKey: geminiKey }) : undefined,
     geminiModel: await readRuntimeEnv("GEMINI_MODEL"),
   });
