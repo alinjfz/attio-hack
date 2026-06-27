@@ -1,4 +1,4 @@
-import type { GoogleGenAI } from "@google/genai";
+import type { GeminiClientLike } from "../clients/gemini.js";
 import { z } from "zod";
 import { generateStructured } from "../clients/gemini.js";
 
@@ -15,7 +15,7 @@ const ListScriptSchema = z.object({
 
 export async function generateListSummaryScript(
   candidates: ListCandidateSummary[],
-  client: GoogleGenAI,
+  client: GeminiClientLike,
   model?: string,
 ): Promise<string> {
   const prompt = [

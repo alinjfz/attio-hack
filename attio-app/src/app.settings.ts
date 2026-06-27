@@ -1,10 +1,17 @@
-import type {SettingsSchema} from "attio"
+import { Settings, type SettingsSchema } from "attio";
 
-/**
- * @see https://docs.attio.com/sdk/guides/adding-workspace-settings
- */
-export const settingsSchema = {
-    workspace: {},
-} satisfies SettingsSchema
+const appSettingsSchema = {
+  workspace: {
+    gemini_api_key: Settings.string(),
+    superlinked_api_key: Settings.string(),
+    superlinked_cluster_url: Settings.string(),
+    superlinked_model: Settings.string(),
+    gemini_model: Settings.string(),
+    enable_tavily: Settings.boolean(),
+    tavily_api_key: Settings.string(),
+    enable_slng: Settings.boolean(),
+    slng_api_key: Settings.string(),
+  },
+} satisfies SettingsSchema;
 
-export default settingsSchema
+export default appSettingsSchema;

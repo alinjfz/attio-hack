@@ -1,41 +1,69 @@
 import type { App } from "attio";
 import {
   Button,
+  Forms,
   LoadingState,
   Widget,
   showToast,
   useForm,
   useQuery,
 } from "attio/client";
-import type { DraftBundle, FitResult, FitTier } from "@recruiting-copilot/core";
+import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
+import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
+import type { FitTier } from "@recruiting-copilot/core/schemas/fit-result";
 import { Suspense, useState } from "react";
 import getCandidateContext from "../graphql/get-candidate-context.graphql";
 import saveCvText from "../server/save-cv-text.server";
+import researchCandidate from "../server/research-candidate.server";
 import { BundlePreview } from "./bundle-preview";
-import { runResearchForRecord } from "./research-flow";
+import { openApprovalDialog } from "./research-flow";
 import { TierBadge } from "./tier-badge";
 
-type TextValue = { __typename?: "TextValue"; value?: string | null };
-type NumberValue = { __typename?: "NumberValue"; value?: number | null };
-type SelectValue = {
-  __typename?: "SelectValue";
-  option?: { title?: string | null } | null;
-};
-
-function readText(value?: TextValue | null): string {
+function readText(
+  value?: { __typename?: string; value?: string | null } | null,
+): string {
   return value?.__typename === "TextValue" ? (value.value ?? "") : "";
 }
 
-function readNumber(value?: NumberValue | null): number | undefined {
+function readNumber(
+  value?: { __typename?: string; value?: number | null } | null,
+): number | undefined {
   return value?.__typename === "NumberValue" ? (value.value ?? undefined) : undefined;
 }
 
-function readTier(value?: SelectValue | null): FitTier | undefined {
-  const title = value?.__typename === "SelectValue" ? value.option?.title : undefined;
+function readTier(
+  value?: { __typename?: string; value?: { title?: string | null } | null } | null,
+): FitTier | undefined {
+  const title = value?.__typename === "SelectValue" ? value.value?.title : undefined;
   if (title === "Strong" || title === "Good" || title === "Weak" || title === "Unknown") {
     return title;
   }
   return undefined;
+}
+
+function readRoleContext(
+  role?: {
+    __typename?: string;
+    value?: {
+      id?: string;
+      description?: { __typename?: string; value?: string | null } | null;
+      title?: { __typename?: string; value?: string | null } | null;
+    } | null;
+  } | null,
+): {
+  roleRecordId?: string;
+  roleDescription?: string;
+  roleTitle?: string;
+} {
+  if (role?.__typename !== "RecordReferenceValue" || !role.value?.id) {
+    return {};
+  }
+
+  return {
+    roleRecordId: role.value.id,
+    roleDescription: readText(role.value.description),
+    roleTitle: readText(role.value.title),
+  };
 }
 
 function RecruitingCopilotContent({ recordId }: { recordId: string }) {
@@ -51,11 +79,17 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
   const fitScore = readNumber(person?.fit_score);
   const fitTier = readTier(person?.fit_tier);
   const twoLiner = readText(person?.two_liner);
-  const hasRole = person?.role?.__typename === "RecordReferenceValue";
+  const roleContext = readRoleContext(person?.role);
+  const hasRole = !!roleContext.roleRecordId;
 
-  const { Form, TextArea, SubmitButton } = useForm({
-    cvText: initialCv,
-  });
+  const { Form, TextArea, SubmitButton } = useForm(
+    {
+      cvText: Forms.string(),
+    },
+    {
+      cvText: initialCv,
+    },
+  );
 
   const handleSaveCv = async (values: { cvText: string }) => {
     try {
@@ -86,25 +120,38 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
 
     setResearching(true);
     try {
-      const result = await runResearchForRecord({
+      const result = await researchCandidate(recordId, {
+        name: candidateName,
+        cvText: initialCv,
+        linkedinUrl: readText(person?.linkedin_url) || undefined,
+        ...roleContext,
+      });
+      await openApprovalDialog({
         recordId,
         candidateName,
+        result,
         onApproved: () => setRefreshKey((value) => value + 1),
       });
-      if (result) {
-        setPreview(result);
-      }
+      setPreview(result);
+    } catch (error) {
+      await showToast({
+        title: "Research failed",
+        text: error instanceof Error ? error.message : "Unknown error",
+        variant: "error",
+      });
     } finally {
       setResearching(false);
     }
   };
 
   return (
-    <Widget>
-      <Widget.Title>Recruiting Copilot</Widget.Title>
-      <Widget.Text.Secondary>
-        Research fit vs linked Role. Nothing writes until you approve.
-      </Widget.Text.Secondary>
+    <>
+      <Widget.TextWidget>
+        <Widget.Title>Recruiting Copilot</Widget.Title>
+        <Widget.Text.Secondary>
+          Research fit vs linked Role. Nothing writes until you approve.
+        </Widget.Text.Secondary>
+      </Widget.TextWidget>
 
       {fitScore !== undefined && fitTier && (
         <Widget.TextWidget>
@@ -130,7 +177,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
       />
 
       {preview && <BundlePreview fit={preview.fit} bundle={preview.bundle} />}
-    </Widget>
+    </>
   );
 }
 

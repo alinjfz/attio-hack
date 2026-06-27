@@ -11,6 +11,7 @@ services:
       WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678}
       GENERIC_TIMEZONE: ${TZ:-Europe/London}
       API_PUBLIC_URL: ${API_PUBLIC_URL:-http://host.docker.internal:3001}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
     volumes:
       - ./.n8n-data:/home/node/.n8n

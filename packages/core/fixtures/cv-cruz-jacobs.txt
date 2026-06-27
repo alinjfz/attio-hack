@@ -1,0 +1,9 @@
+Cruz Jacobs — Backend Engineer
+
+6 years focused on Java and Spring Boot microservices in fintech. Solid API design and event-driven architecture background.
+
+Recently learning React on side projects. No production TypeScript or CRM integration experience.
+
+Strengths: reliability, observability, and mentoring junior engineers.
+
+Education: MSc Computer Science, University of Edinburgh.

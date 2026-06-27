@@ -1,4 +1,5 @@
-import type { DraftBundle, FitResult } from "@recruiting-copilot/core";
+import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
+import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
 import { Section, Typography } from "attio/client";
 import { TierBadge } from "./tier-badge";
 

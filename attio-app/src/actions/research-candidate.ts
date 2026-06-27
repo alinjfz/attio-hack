@@ -1,5 +1,7 @@
 import type { App } from "attio";
-import { runResearchForRecord } from "../record/research-flow";
+import { showToast } from "attio/client";
+import { openApprovalDialog } from "../record/research-flow";
+import researchCandidate from "../server/research-candidate.server";
 
 export const researchCandidateAction: App.Record.Action = {
   id: "research-candidate",
@@ -7,9 +9,19 @@ export const researchCandidateAction: App.Record.Action = {
   icon: "Search",
   objects: ["people"],
   onTrigger: async ({ recordId }) => {
-    await runResearchForRecord({
-      recordId,
-      candidateName: "Candidate",
-    });
+    try {
+      const result = await researchCandidate(recordId);
+      await openApprovalDialog({
+        recordId,
+        candidateName: "Candidate",
+        result,
+      });
+    } catch (error) {
+      await showToast({
+        title: "Research failed",
+        text: error instanceof Error ? error.message : "Unknown error",
+        variant: "error",
+      });
+    }
   },
 };

@@ -1,0 +1,41 @@
+{
+  "roleObjectSlug": "roles",
+  "listSlug": "recruiting",
+  "listName": "Recruiting",
+  "roles": [
+    {
+      "key": "senior-fullstack",
+      "title": "Senior Full-Stack Engineer",
+      "descriptionFile": "sample-role.txt"
+    }
+  ],
+  "candidates": [
+    {
+      "key": "maybelle-damore",
+      "firstName": "Maybelle",
+      "lastName": "D'Amore",
+      "recordId": "a8de575f-da16-4936-acb1-7cd70cfef192",
+      "linkedinUrl": "https://www.linkedin.com/in/maybelle-damore",
+      "cvFile": "cv-maybelle-damore.txt",
+      "roleKey": "senior-fullstack"
+    },
+    {
+      "key": "devon-spinka",
+      "firstName": "Devon",
+      "lastName": "Spinka",
+      "recordId": "60cba495-2b23-473d-8168-d88ef0906641",
+      "linkedinUrl": "https://www.linkedin.com/in/devon-spinka",
+      "cvFile": "cv-devon-spinka.txt",
+      "roleKey": "senior-fullstack"
+    },
+    {
+      "key": "cruz-jacobs",
+      "firstName": "Cruz",
+      "lastName": "Jacobs",
+      "recordId": "e3e4a0f1-b139-436d-94f1-45abcc468321",
+      "linkedinUrl": "https://www.linkedin.com/in/cruz-jacobs",
+      "cvFile": "cv-cruz-jacobs.txt",
+      "roleKey": "senior-fullstack"
+    }
+  ]
+}

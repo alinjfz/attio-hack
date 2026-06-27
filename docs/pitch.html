@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recruiting Copilot — Attio Hackathon</title>
+    <meta
+      name="description"
+      content="Attio holds the context. Research candidates, score semantic fit, draft HM notes — nothing hits the CRM until you approve."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0c1222;
+        --ink-muted: #4b5568;
+        --paper: #faf9f7;
+        --paper-warm: #f3f1ec;
+        --line: #e5e2db;
+        --accent: #0f766e;
+        --accent-soft: #ccfbf1;
+        --strong: #15803d;
+        --strong-bg: #dcfce7;
+        --good: #1d4ed8;
+        --good-bg: #dbeafe;
+        --weak: #b45309;
+        --weak-bg: #fef3c7;
+        --shadow: 0 24px 64px rgba(12, 18, 34, 0.08);
+        --radius: 14px;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: "IBM Plex Sans", system-ui, sans-serif;
+        font-size: 1.05rem;
+        line-height: 1.65;
+        color: var(--ink);
+        background: var(--paper);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: Fraunces, Georgia, serif;
+        font-weight: 700;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .wrap {
+        width: min(1120px, calc(100% - 2.5rem));
+        margin-inline: auto;
+      }
+
+      /* ── Nav ── */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(250, 249, 247, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 0;
+        gap: 1rem;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      .brand:hover {
+        text-decoration: none;
+      }
+
+      .brand img {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 1.5rem;
+        list-style: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .nav-links a {
+        color: var(--ink-muted);
+      }
+      .nav-links a:hover {
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      .track-pill {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: var(--ink);
+        color: #fff;
+        white-space: nowrap;
+      }
+
+      /* ── Hero ── */
+      .hero {
+        padding: 4.5rem 0 3rem;
+      }
+
+      .hero-copy {
+        max-width: 42rem;
+        margin-bottom: 2.5rem;
+      }
+
+      .hero-tag {
+        display: inline-block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        margin-bottom: 1.25rem;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.4rem, 5vw, 3.5rem);
+        margin-bottom: 1.25rem;
+      }
+
+      .hero-lead {
+        font-size: 1.2rem;
+        color: var(--ink-muted);
+        max-width: 52ch;
+        margin-bottom: 2rem;
+      }
+
+      .hero-lead strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .hero-visual {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--line);
+        background: var(--paper-warm);
+      }
+
+      .hero-img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: center;
+        image-orientation: none;
+      }
+
+      /* ── Sections ── */
+      section {
+        padding: 4rem 0;
+      }
+
+      section:nth-child(even) {
+        background: var(--paper-warm);
+        border-block: 1px solid var(--line);
+      }
+
+      .section-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0.75rem;
+      }
+
+      .section-title {
+        font-size: clamp(1.75rem, 3vw, 2.25rem);
+        margin-bottom: 1rem;
+      }
+
+      .section-intro {
+        color: var(--ink-muted);
+        max-width: 58ch;
+        margin-bottom: 2.5rem;
+      }
+
+      /* ── Problem / solution ── */
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 1.75rem;
+      }
+
+      .card h3 {
+        font-size: 1.15rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .card p {
+        color: var(--ink-muted);
+        font-size: 0.98rem;
+      }
+
+      .card.problem {
+        border-top: 3px solid #ef4444;
+      }
+      .card.solution {
+        border-top: 3px solid var(--accent);
+      }
+
+      /* ── Steps ── */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        counter-reset: step;
+      }
+
+      .step {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 1.5rem 1.25rem;
+        position: relative;
+      }
+
+      .step::before {
+        counter-increment: step;
+        content: counter(step);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 8px;
+        background: var(--ink);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .step h3 {
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .step p {
+        font-size: 0.88rem;
+        color: var(--ink-muted);
+        line-height: 1.5;
+      }
+
+      /* ── Callout ── */
+      .callout {
+        background: var(--ink);
+        color: #fff;
+        border-radius: var(--radius);
+        padding: 2.5rem;
+        text-align: center;
+        margin-top: 2.5rem;
+      }
+
+      .callout p {
+        font-family: Fraunces, Georgia, serif;
+        font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+        font-weight: 500;
+        max-width: 42ch;
+        margin-inline: auto;
+        line-height: 1.4;
+      }
+
+      .callout em {
+        font-style: normal;
+        color: #5eead4;
+      }
+
+      /* ── Architecture ── */
+      .arch-img {
+        width: 100%;
+        border-radius: var(--radius);
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .arch-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+
+      .tier {
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+      }
+
+      .tier.strong {
+        background: var(--strong-bg);
+        color: var(--strong);
+      }
+      .tier.good {
+        background: var(--good-bg);
+        color: var(--good);
+      }
+      .tier.weak {
+        background: var(--weak-bg);
+        color: var(--weak);
+      }
+
+      /* ── Partners ── */
+      .partners {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+      }
+
+      .partner {
+        font-size: 0.85rem;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink-muted);
+      }
+
+      .partner.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      /* ── Demo ── */
+      .demo-list {
+        list-style: none;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .demo-list li {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 1rem 1.25rem;
+        font-size: 0.95rem;
+      }
+
+      .demo-list .num {
+        flex-shrink: 0;
+        width: 1.75rem;
+        height: 1.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: var(--paper-warm);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ink-muted);
+      }
+
+      /* ── Footer ── */
+      footer {
+        padding: 2.5rem 0;
+        border-top: 1px solid var(--line);
+        color: var(--ink-muted);
+        font-size: 0.88rem;
+      }
+
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .footer-brand img {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 900px) {
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+
+        .steps {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .nav-links {
+          display: none;
+        }
+      }
+
+      @media (max-width: 540px) {
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ── Entrance animation ── */
+      @media (prefers-reduced-motion: no-preference) {
+        .fade-in {
+          animation: fadeUp 0.7s ease both;
+        }
+
+        .fade-in-delay {
+          animation-delay: 0.15s;
+        }
+
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="wrap nav-inner">
+        <a class="brand" href="#top">
+          <!-- Replace assets/logo.svg → assets/logo.png after generation -->
+          <img
+            src="assets/logo.png"
+            alt="Recruiting Copilot logo"
+            width="36"
+            height="36"
+          />
+          Recruiting Copilot
+        </a>
+        <ul class="nav-links">
+          <li><a href="#idea">Idea</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#demo">Demo</a></li>
+        </ul>
+        <span class="track-pill">Attio track</span>
+      </div>
+    </nav>
+
+    <main id="top">
+      <!-- Hero -->
+      <header class="hero">
+        <div class="wrap">
+          <div class="hero-copy fade-in">
+            <span class="hero-tag">Agentic CRM · Hackathon 2026</span>
+            <h1>Research, score, draft — you approve first.</h1>
+            <p class="hero-lead">
+              <strong>Attio holds the context.</strong> We research candidates,
+              score semantic fit against the role, and draft HM notes and client
+              submittals — nothing writes to the CRM until a human approves.
+            </p>
+            <div class="partners">
+              <span class="partner primary">Attio</span>
+              <span class="partner">Superlinked SIE</span>
+              <span class="partner">Gemini</span>
+              <span class="partner">Tavily</span>
+              <span class="partner">n8n</span>
+              <span class="partner">SLNG</span>
+            </div>
+          </div>
+          <figure class="hero-visual fade-in fade-in-delay">
+            <img
+              class="hero-img"
+              src="assets/hero.png"
+              alt="Recruiting Copilot product hero — recruiter reviewing fit score and approval flow"
+              width="1376"
+              height="768"
+            />
+          </figure>
+        </div>
+      </header>
+
+      <!-- Idea -->
+      <section id="idea">
+        <div class="wrap">
+          <p class="section-label">The idea</p>
+          <h2 class="section-title">
+            Your CRM already knows the role. We do the research.
+          </h2>
+          <p class="section-intro">
+            Recruiters spend hours reading CVs, writing notes, and ranking
+            candidates manually. Recruiting Copilot lives inside Attio — on
+            every Person record — and turns CV + role context into fit scores,
+            tier labels, and ready-to-send drafts. You stay in control: review,
+            edit one line, then approve.
+          </p>
+          <div class="two-col">
+            <div class="card problem">
+              <h3>Without Copilot</h3>
+              <p>
+                Context scattered across docs and tabs. Subjective gut-feel
+                ranking. Notes rewritten from scratch. Risk of auto-sync
+                polluting your CRM with bad data.
+              </p>
+            </div>
+            <div class="card solution">
+              <h3>With Copilot</h3>
+              <p>
+                One widget on the Person record. Semantic fit % against the
+                linked Role. Pros, cons, gaps, HM note, and client submittal —
+                all staged for approval before write-back.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section id="how">
+        <div class="wrap">
+          <p class="section-label">How it works</p>
+          <h2 class="section-title">Four steps, one approval gate</h2>
+          <p class="section-intro">
+            Paste a CV, click Research, review the bundle, approve. Fields
+            populate and the recruiting list re-sorts by fit score.
+          </p>
+
+          <div class="steps">
+            <div class="step">
+              <h3>Load context</h3>
+              <p>
+                Attio GraphQL loads the Person's CV text and linked Role
+                description — no copy-paste between tools.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Score fit</h3>
+              <p>
+                Superlinked SIE embeds CV vs. role and returns a fit % plus
+                tier: Strong, Good, Weak, or Unknown.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Generate drafts</h3>
+              <p>
+                Gemini produces pros/cons, gaps, a two-liner, HM note, and
+                client submittal as structured JSON.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Approve &amp; write</h3>
+              <p>
+                You edit if needed, hit Approve — only then does Attio REST
+                update fit_score, tier, and notes.
+              </p>
+            </div>
+          </div>
+
+          <div class="callout">
+            <p>
+              <em>Nothing hits the CRM until you approve.</em> No silent
+              auto-writes. No surprise field updates.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture -->
+      <section id="architecture">
+        <div class="wrap">
+          <p class="section-label">Architecture</p>
+          <h2 class="section-title">Shared core, two isolated paths</h2>
+          <p class="section-intro">
+            The Attio app calls server functions → shared pipeline in
+            <code>packages/core</code>. A separate n8n webhook hits the same
+            core via a standalone API — if n8n fails, the Attio demo still
+            works.
+          </p>
+
+          <!-- Replace assets/architecture.svg → assets/architecture.png after generation -->
+          <img
+            class="arch-img"
+            src="assets/architecture.png"
+            alt="Recruiting Copilot architecture — Attio UI, shared core pipeline, partner APIs, and n8n webhook path"
+            width="1600"
+            height="900"
+          />
+
+          <div class="arch-legend">
+            <span class="tier strong">Strong · 80%+</span>
+            <span class="tier good">Good · 60–79%</span>
+            <span class="tier weak">Weak · &lt;60%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Demo -->
+      <section id="demo">
+        <div class="wrap">
+          <p class="section-label">2-minute demo</p>
+          <h2 class="section-title">What to show the jury</h2>
+          <p class="section-intro">
+            Open the Recruiting list, research one candidate live, approve,
+            bulk-research two more, flash the submittal draft.
+          </p>
+
+          <ol class="demo-list">
+            <li>
+              <span class="num">1</span> Open the
+              <strong>Recruiting</strong> list — candidates visible, no fit
+              scores yet.
+            </li>
+            <li>
+              <span class="num">2</span> Open a person → paste CV text → click
+              <strong>Research</strong>.
+            </li>
+            <li>
+              <span class="num">3</span> Review fit %, tier, pros/cons, 2-liner,
+              HM note → <strong>edit one line</strong> →
+              <strong>Approve</strong>.
+            </li>
+            <li>
+              <span class="num">4</span> Fields populate; list re-sorts by
+              <code>fit_score</code>.
+            </li>
+            <li>
+              <span class="num">5</span> <strong>Bulk-research</strong> two more
+              candidates — top fit is obvious.
+            </li>
+            <li>
+              <span class="num">6</span> Flash the
+              <strong>client submittal draft</strong> — nothing is sent without
+              approval.
+            </li>
+            <li>
+              <span class="num">7</span> <em>Optional:</em> Click
+              <strong>Listen to summary</strong> (SLNG) for a spoken top-3
+              overview.
+            </li>
+            <li>
+              <span class="num">8</span> <em>Optional:</em> Show n8n workflow /
+              live webhook trigger.
+            </li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="assets/logo.png" alt="" width="28" height="28" />
+          <span>Recruiting Copilot · Attio Hackathon submission</span>
+        </div>
+        <span>MIT · <a href="https://github.com">GitHub repo</a></span>
+      </div>
+    </footer>
+  </body>
+</html>

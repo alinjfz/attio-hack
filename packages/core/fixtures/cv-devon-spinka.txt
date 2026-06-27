@@ -1,0 +1,9 @@
+Devon Spinka — Full-Stack Developer
+
+5 years experience across React, Python, and Django. Strong frontend engineer who has recently moved into full-stack delivery.
+
+Built customer portals and internal admin tools. Comfortable with PostgreSQL and Docker. Some exposure to AWS (S3, Lambda).
+
+Limited direct CRM or ATS experience. Interested in semantic search and AI-assisted workflows.
+
+Education: BEng Software Engineering, Imperial College London.

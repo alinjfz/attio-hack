@@ -1,5 +1,5 @@
 import { Badge } from "attio/client";
-import type { FitTier } from "@recruiting-copilot/core";
+import type { FitTier } from "@recruiting-copilot/core/schemas/fit-result";
 
 const TIER_COLORS: Record<
   FitTier,

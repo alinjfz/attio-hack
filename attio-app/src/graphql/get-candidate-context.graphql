@@ -18,7 +18,21 @@ query GetCandidateContext($recordId: String!) {
     role: attribute(slug: "role") {
       __typename
       ... on RecordReferenceValue {
-        target_record_id
+        value {
+          id
+          description: attribute(slug: "description") {
+            __typename
+            ... on TextValue {
+              value
+            }
+          }
+          title: attribute(slug: "title") {
+            __typename
+            ... on TextValue {
+              value
+            }
+          }
+        }
       }
     }
     fit_score: attribute(slug: "fit_score") {
@@ -30,7 +44,7 @@ query GetCandidateContext($recordId: String!) {
     fit_tier: attribute(slug: "fit_tier") {
       __typename
       ... on SelectValue {
-        option {
+        value {
           title
         }
       }

@@ -1,4 +1,3 @@
-import { tavily } from "@tavily/core";
 import { isTavilyEnabled } from "../config/features.js";
 import type { EnrichmentContext } from "../schemas/research-input.js";
 
@@ -27,7 +26,47 @@ export function createTavilyClient(config: TavilyConfig): TavilyClientLike {
   if (!config.apiKey?.trim()) {
     throw new Error("TAVILY_API_KEY is required when ENABLE_TAVILY=true");
   }
-  return tavily({ apiKey: config.apiKey });
+
+  const apiKey = config.apiKey.trim();
+
+  return {
+    async search(query, options) {
+      const response = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: apiKey,
+          query,
+          search_depth: options?.searchDepth ?? "basic",
+          max_results: options?.maxResults ?? 5,
+          include_answer: options?.includeAnswer ?? false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Tavily search failed: ${response.status} ${await response.text()}`);
+      }
+
+      return (await response.json()) as Awaited<ReturnType<TavilyClientLike["search"]>>;
+    },
+
+    async extract(urls) {
+      const response = await fetch("https://api.tavily.com/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: apiKey,
+          urls,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Tavily extract failed: ${response.status} ${await response.text()}`);
+      }
+
+      return (await response.json()) as Awaited<ReturnType<TavilyClientLike["extract"]>>;
+    },
+  };
 }
 
 export function shouldEnrich(cvText: string, linkedinUrl?: string): boolean {

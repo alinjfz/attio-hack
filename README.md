@@ -246,6 +246,8 @@ Never commit `.env` — only `.env.example` is tracked.
 | Issue | Fix |
 |-------|-----|
 | SIE "warming up" / timeout | Cluster cold start — wait 5–7 min or pre-warm with `pnpm research:smoke` |
+| `encodeInto: is not implemented yet` | Attio sandbox can't run the msgpack SDK — app uses JSON fetch client (restart `pnpm dev`) |
+| Missing Superlinked keys in Attio | Set `superlinked_*` and `gemini_api_key` in workspace app Settings (not build.attio.com) |
 | Missing Role link error | Link Person → Role; ensure Role has `description` |
 | Empty CV error | Paste CV in widget and click **Save CV** |
 | n8n 401 | Match `X-Webhook-Secret` to `WEBHOOK_SECRET` |

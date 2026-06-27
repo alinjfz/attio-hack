@@ -6,6 +6,13 @@ export interface SIEClientConfig {
   model?: string;
 }
 
+export interface FetchSIEClientOptions extends SIEClientConfig {
+  /** Per-request timeout in ms. Keep under Attio's 30s server-function limit. */
+  timeout?: number;
+  waitForCapacity?: boolean;
+  provisionTimeout?: number;
+}
+
 export interface EncodeResult {
   dense: Float32Array;
 }
@@ -16,6 +23,122 @@ export interface SIEClientLike {
     input: { text: string },
     options?: { isQuery?: boolean },
   ): Promise<{ dense?: Float32Array }>;
+}
+
+interface JsonDenseVector {
+  values?: number[];
+}
+
+interface JsonEncodeResponse {
+  items?: Array<{ dense?: JsonDenseVector }>;
+}
+
+function normalizeBaseUrl(clusterUrl: string): string {
+  return clusterUrl.replace(/\/$/, "");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(response: Response): number {
+  const header = response.headers.get("Retry-After");
+  if (!header) {
+    return 5_000;
+  }
+  const seconds = Number.parseInt(header, 10);
+  if (!Number.isNaN(seconds)) {
+    return seconds * 1_000;
+  }
+  const dateMs = Date.parse(header);
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now());
+  }
+  return 5_000;
+}
+
+/**
+ * JSON/fetch SIE client for constrained runtimes (e.g. Attio server functions).
+ * The official SDK uses msgpack, which calls TextEncoder.encodeInto — unavailable in Attio's sandbox.
+ */
+export function createFetchSIEClient(config: FetchSIEClientOptions): SIEClientLike {
+  const baseUrl = normalizeBaseUrl(config.clusterUrl);
+  const timeout = config.timeout ?? 25_000;
+  const waitForCapacity = config.waitForCapacity ?? true;
+  const provisionTimeout = config.provisionTimeout ?? 25_000;
+
+  return {
+    async encode(model, input, options) {
+      const body: Record<string, unknown> = {
+        items: [input],
+      };
+
+      if (options?.isQuery !== undefined) {
+        body.params = { is_query: options.isQuery };
+      }
+
+      const url = `${baseUrl}/v1/encode/${encodeURIComponent(model)}`;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+      if (config.apiKey) {
+        headers.Authorization = `Bearer ${config.apiKey}`;
+      }
+
+      const startTime = Date.now();
+
+      while (true) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") {
+            throw new Error(`Superlinked request timed out after ${timeout}ms`);
+          }
+          throw error;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (response.status === 202) {
+          if (!waitForCapacity) {
+            throw new Error("Superlinked cluster has no capacity. Try again in a few minutes.");
+          }
+          const elapsed = Date.now() - startTime;
+          if (elapsed >= provisionTimeout) {
+            throw new Error(
+              `Superlinked cluster is still warming up. Pre-warm with "pnpm research:smoke", then retry.`,
+            );
+          }
+          const delay = Math.min(parseRetryAfterMs(response), provisionTimeout - elapsed);
+          await sleep(delay);
+          continue;
+        }
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Superlinked encode failed (${response.status}): ${text.slice(0, 200)}`);
+        }
+
+        const data = (await response.json()) as JsonEncodeResponse;
+        const values = data.items?.[0]?.dense?.values;
+        if (!values?.length) {
+          throw new Error("SIE encode returned no dense embedding");
+        }
+
+        return { dense: Float32Array.from(values) };
+      }
+    },
+  };
 }
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {

@@ -3,9 +3,9 @@ import {
   buildHmNoteContent,
   createNote,
   patchPerson,
-  type DraftBundle,
-  type FitResult,
-} from "@recruiting-copilot/core";
+} from "@recruiting-copilot/core/attio";
+import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
+import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
 
 export interface ApproveWritebackInput {
   recordId: string;

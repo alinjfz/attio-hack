@@ -1,9 +1,8 @@
-import {
-  createGeminiClient,
-  generateListSummaryScript,
-  isSlngEnabled,
-  textToSpeech,
-} from "@recruiting-copilot/core";
+import { createGeminiClient } from "@recruiting-copilot/core/clients/gemini";
+import { textToSpeech } from "@recruiting-copilot/core/clients/slng";
+import { isSlngEnabled } from "@recruiting-copilot/core/config/features";
+import { generateListSummaryScript } from "@recruiting-copilot/core/pipeline/summarize-list";
+import { readRuntimeEnv, readRuntimeEnvFlag } from "./runtime-env";
 
 export interface SummarizeListInput {
   candidates: Array<{
@@ -23,18 +22,19 @@ export interface SummarizeListResult {
 export default async function summarizeList(
   input: SummarizeListInput,
 ): Promise<SummarizeListResult> {
-  if (!isSlngEnabled()) {
-    throw new Error("SLNG audio summary is disabled. Set ENABLE_SLNG=true and SLNG_API_KEY.");
+  const slngEnabled = await readRuntimeEnvFlag("ENABLE_SLNG");
+  const slngKey = await readRuntimeEnv("SLNG_API_KEY");
+
+  if (!isSlngEnabled({ enableSlng: slngEnabled, slngApiKey: slngKey })) {
+    throw new Error("SLNG audio summary is disabled. Set enable_slng and slng_api_key in app settings.");
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const slngKey = process.env.SLNG_API_KEY;
-
+  const geminiKey = await readRuntimeEnv("GEMINI_API_KEY");
   if (!geminiKey) {
-    throw new Error("Missing GEMINI_API_KEY in app secrets.");
+    throw new Error("Missing gemini_api_key in app settings.");
   }
   if (!slngKey) {
-    throw new Error("Missing SLNG_API_KEY in app secrets.");
+    throw new Error("Missing slng_api_key in app settings.");
   }
 
   const topCandidates = input.candidates
@@ -48,7 +48,7 @@ export default async function summarizeList(
   const script = await generateListSummaryScript(
     topCandidates,
     createGeminiClient({ apiKey: geminiKey }),
-    process.env.GEMINI_MODEL,
+    await readRuntimeEnv("GEMINI_MODEL"),
   );
 
   const audio = await textToSpeech(script, { apiKey: slngKey });

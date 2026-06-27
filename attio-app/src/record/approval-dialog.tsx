@@ -2,13 +2,14 @@ import {
   Badge,
   Button,
   Divider,
+  Forms,
   Section,
   Typography,
   useForm,
   showToast,
 } from "attio/client";
-import { useState } from "react";
-import type { DraftBundle, FitResult } from "@recruiting-copilot/core";
+import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
+import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
 import approveWriteback from "../server/approve-writeback.server";
 import { TierBadge } from "./tier-badge";
 
@@ -29,14 +30,18 @@ export function ApprovalDialog({
   bundle,
   onApproved,
 }: ApprovalDialogProps) {
-  const [submitting, setSubmitting] = useState(false);
-  const { Form, TextArea, SubmitButton } = useForm({
-    twoLiner: bundle.twoLiner,
-    hmNote: bundle.hmNote,
-  });
+  const { Form, TextArea, SubmitButton, WithState } = useForm(
+    {
+      twoLiner: Forms.string(),
+      hmNote: Forms.string(),
+    },
+    {
+      twoLiner: bundle.twoLiner,
+      hmNote: bundle.hmNote,
+    },
+  );
 
   const handleApprove = async (values: { twoLiner: string; hmNote: string }) => {
-    setSubmitting(true);
     try {
       await approveWriteback({
         recordId,
@@ -60,8 +65,6 @@ export function ApprovalDialog({
         text: error instanceof Error ? error.message : "Unknown error",
         variant: "error",
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -127,17 +130,22 @@ export function ApprovalDialog({
 
       <Divider />
 
-      <SubmitButton
-        label={submitting ? "Writing to Attio…" : "Approve & write to Attio"}
-        disabled={submitting}
-      />
-      <Button
-        label="Reject"
-        onClick={() => {
-          hideDialog();
-        }}
-        disabled={submitting}
-      />
+      <WithState submitting>
+        {({ submitting }) => (
+          <>
+            <SubmitButton
+              label={submitting ? "Writing to Attio…" : "Approve & write to Attio"}
+            />
+            <Button
+              label="Reject"
+              onClick={() => {
+                hideDialog();
+              }}
+              disabled={submitting}
+            />
+          </>
+        )}
+      </WithState>
     </Form>
   );
 }

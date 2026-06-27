@@ -1,4 +1,5 @@
 {
+  "id": "1",
   "name": "Recruiting Copilot — n8n mirror",
   "nodes": [
     {
@@ -33,7 +34,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"recordId\": \"{{$json.recordId}}\",\n  \"roleDescription\": \"{{$json.roleDescription}}\",\n  \"cvText\": \"{{$json.cvText}}\",\n  \"candidateName\": \"{{$json.candidateName}}\",\n  \"linkedinUrl\": \"{{$json.linkedinUrl}}\"\n}"
+        "jsonBody": "={\n  \"recordId\": \"{{$json.body.recordId}}\",\n  \"roleDescription\": \"{{$json.body.roleDescription}}\",\n  \"cvText\": \"{{$json.body.cvText}}\",\n  \"candidateName\": \"{{$json.body.candidateName}}\",\n  \"linkedinUrl\": \"{{$json.body.linkedinUrl}}\"\n}"
       },
       "id": "http-research",
       "name": "Call recruiting API",

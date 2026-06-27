@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" fill="none">
+  <rect width="1920" height="1080" fill="#f8fafc"/>
+  <rect x="80" y="80" width="1760" height="920" rx="24" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="16 12" fill="#f1f5f9"/>
+  <rect x="160" y="200" width="640" height="480" rx="16" fill="#e2e8f0"/>
+  <rect x="880" y="160" width="800" height="560" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="2"/>
+  <rect x="920" y="220" width="320" height="24" rx="4" fill="#cbd5e1"/>
+  <rect x="920" y="280" width="480" height="16" rx="4" fill="#e2e8f0"/>
+  <rect x="920" y="320" width="400" height="16" rx="4" fill="#e2e8f0"/>
+  <rect x="920" y="400" width="120" height="36" rx="18" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+  <text x="980" y="424" fill="#15803d" font-family="system-ui,sans-serif" font-size="16" font-weight="600">87% Strong</text>
+  <rect x="920" y="480" width="160" height="44" rx="8" fill="#0f172a"/>
+  <text x="1000" y="508" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="16" font-weight="600">Approve</text>
+  <circle cx="480" cy="440" r="80" fill="#cbd5e1"/>
+  <rect x="400" y="540" width="160" height="20" rx="4" fill="#94a3b8"/>
+  <text x="960" y="900" text-anchor="middle" fill="#64748b" font-family="system-ui,sans-serif" font-size="28" font-weight="500">hero.png  1920ù1080</text>
+  <text x="960" y="940" text-anchor="middle" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="20">Recruiter + CRM widget mockup</text>
+</svg>

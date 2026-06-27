@@ -9,6 +9,7 @@
     "dev": "pnpm --filter attio-app dev",
     "build": "pnpm -r build",
     "research:smoke": "pnpm --filter @recruiting-copilot/core research:smoke",
+    "seed:attio": "pnpm --filter @recruiting-copilot/core seed:attio",
     "api:dev": "pnpm --filter @recruiting-copilot/api dev",
     "n8n:dev": "docker compose up n8n",
     "n8n:dev:npx": "N8N_USER_FOLDER=./.n8n-data N8N_PORT=5678 npx --yes n8n@latest start",

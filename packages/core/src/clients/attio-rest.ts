@@ -1,3 +1,5 @@
+import { readEnv } from "../config/env.js";
+
 export interface AttioRestConfig {
   apiToken: string;
   baseUrl?: string;
@@ -31,7 +33,7 @@ function getBaseUrl(config: AttioRestConfig): string {
 }
 
 function getRoleObjectSlug(config: AttioRestConfig): string {
-  return config.roleObjectSlug ?? process.env.ATTIO_ROLE_OBJECT_SLUG ?? "roles";
+  return config.roleObjectSlug ?? readEnv("ATTIO_ROLE_OBJECT_SLUG") ?? "roles";
 }
 
 export function extractTextValue(
@@ -68,7 +70,13 @@ export async function getRecord(
   );
 
   if (!response.ok) {
-    throw new Error(`Attio GET ${objectSlug} failed: ${response.status} ${await response.text()}`);
+    const body = await response.text();
+    if (response.status === 403) {
+      throw new Error(
+        `Attio GET ${objectSlug} failed: 403 — API key needs Records read + Object Configuration read scopes (Workspace settings → Developers → your app → Scopes). ${body}`,
+      );
+    }
+    throw new Error(`Attio GET ${objectSlug} failed: ${response.status} ${body}`);
   }
 
   return response.json() as Promise<AttioRecordResponse>;

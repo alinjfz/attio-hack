@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { generateStructured } from "../clients/gemini.js";
+import { createGeminiClient, generateStructured } from "../clients/gemini.js";
 import { DraftBundleSchema } from "../schemas/draft-bundle.js";
 import { buildDraftPrompt, generateDrafts } from "./generate-drafts.js";
 
@@ -50,11 +50,16 @@ describe("generateDrafts", () => {
 
   it("throws on malformed JSON from Gemini", async () => {
     const TestSchema = z.object({ ok: z.boolean() });
-    const mockClient = {
-      models: {
-        generateContent: vi.fn().mockResolvedValue({ text: "not-json" }),
-      },
-    } as never;
+    const mockClient = createGeminiClient({ apiKey: "test" });
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: "not-json" }] } }],
+        }),
+        { status: 200 },
+      ),
+    );
 
     await expect(
       generateStructured(mockClient, {

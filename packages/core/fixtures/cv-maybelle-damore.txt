@@ -1,0 +1,9 @@
+Maybelle D'Amore — Senior Full-Stack Engineer
+
+8 years building TypeScript/React systems at scale. Led migration of monolithic CRM extensions to event-driven microservices at a B2B SaaS company.
+
+Core skills: TypeScript, React, Node.js, PostgreSQL, AWS, REST API design, CRM integrations.
+
+Built recruiting tooling that connected ATS workflows with custom scoring pipelines. Shipped an Attio marketplace app prototype for candidate research.
+
+Education: BSc Computer Science, University of Manchester.

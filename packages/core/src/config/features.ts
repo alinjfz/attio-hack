@@ -3,26 +3,41 @@
  * Gemini + Superlinked are required for research; Tavily, SLNG, and n8n paths are optional.
  */
 
-function envFlag(name: string): boolean {
-  const value = process.env[name]?.trim().toLowerCase();
-  return value === "true" || value === "1" || value === "yes";
+import { readEnv, readEnvFlag } from "./env.js";
+
+export interface FeatureEnv {
+  enableTavily?: boolean;
+  tavilyApiKey?: string;
+  enableSlng?: boolean;
+  slngApiKey?: string;
 }
 
-export function isTavilyEnabled(): boolean {
-  return envFlag("ENABLE_TAVILY") && Boolean(process.env.TAVILY_API_KEY?.trim());
+function resolveFeatureEnv(overrides?: FeatureEnv) {
+  const enableTavily = overrides?.enableTavily ?? readEnvFlag("ENABLE_TAVILY");
+  const tavilyApiKey = overrides?.tavilyApiKey ?? readEnv("TAVILY_API_KEY");
+  const enableSlng = overrides?.enableSlng ?? readEnvFlag("ENABLE_SLNG");
+  const slngApiKey = overrides?.slngApiKey ?? readEnv("SLNG_API_KEY");
+  return { enableTavily, tavilyApiKey, enableSlng, slngApiKey };
 }
 
-export function isSlngEnabled(): boolean {
-  return envFlag("ENABLE_SLNG") && Boolean(process.env.SLNG_API_KEY?.trim());
+export function isTavilyEnabled(overrides?: FeatureEnv): boolean {
+  const env = resolveFeatureEnv(overrides);
+  return env.enableTavily && Boolean(env.tavilyApiKey);
 }
 
-export async function createTavilyClientIfEnabled(): Promise<
-  import("../clients/tavily.js").TavilyClientLike | undefined
-> {
-  if (!isTavilyEnabled()) {
+export function isSlngEnabled(overrides?: FeatureEnv): boolean {
+  const env = resolveFeatureEnv(overrides);
+  return env.enableSlng && Boolean(env.slngApiKey);
+}
+
+export async function createTavilyClientIfEnabled(
+  overrides?: FeatureEnv,
+): Promise<import("../clients/tavily.js").TavilyClientLike | undefined> {
+  const env = resolveFeatureEnv(overrides);
+  if (!env.enableTavily || !env.tavilyApiKey) {
     return undefined;
   }
 
   const { createTavilyClient } = await import("../clients/tavily.js");
-  return createTavilyClient({ apiKey: process.env.TAVILY_API_KEY!.trim() });
+  return createTavilyClient({ apiKey: env.tavilyApiKey });
 }

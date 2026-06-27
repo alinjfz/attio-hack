@@ -1,4 +1,4 @@
-import type { GoogleGenAI } from "@google/genai";
+import type { GeminiClientLike } from "../clients/gemini.js";
 import { generateStructured } from "../clients/gemini.js";
 import type { EnrichmentContext } from "../schemas/research-input.js";
 import { DraftBundleSchema, type DraftBundle } from "../schemas/draft-bundle.js";
@@ -14,7 +14,7 @@ export interface GenerateDraftsInput {
 }
 
 export interface GenerateDraftsDeps {
-  geminiClient: GoogleGenAI;
+  geminiClient: GeminiClientLike;
   model?: string;
 }
 
