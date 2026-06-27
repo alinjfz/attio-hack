@@ -2,6 +2,8 @@ services:
   n8n:
     image: n8nio/n8n:latest
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "${N8N_PORT:-5678}:5678"
     environment:
@@ -10,9 +12,9 @@ services:
       N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
       WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678}
       GENERIC_TIMEZONE: ${TZ:-Europe/London}
-      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://host.docker.internal:3001}
+      # Always reach the API on the host machine from inside the container
+      API_PUBLIC_URL: http://host.docker.internal:${PORT:-3001}
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
     volumes:
       - ./.n8n-data:/home/node/.n8n
       - ./n8n:/import:ro

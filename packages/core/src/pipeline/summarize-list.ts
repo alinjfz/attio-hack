@@ -42,3 +42,33 @@ export async function generateListSummaryScript(
 
   return result.script;
 }
+
+export async function generateCandidateReadAloudScript(
+  candidate: ListCandidateSummary,
+  position: number,
+  total: number,
+  client: GeminiClientLike,
+  model?: string,
+): Promise<string> {
+  const prompt = [
+    "Write a spoken 15-second recruiting read-aloud for one candidate.",
+    "Partnership-first tone. Do not imply any message was sent.",
+    `This is candidate ${position} of ${total} in a batch review.`,
+    "",
+    `Name: ${candidate.name}`,
+    `Fit: ${candidate.fitScore}% (${candidate.fitTier})`,
+    candidate.twoLiner ? `Highlight: ${candidate.twoLiner}` : "",
+    "",
+    'Return JSON: { "script": "..." }',
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const result = await generateStructured(client, {
+    prompt,
+    schema: ListScriptSchema,
+    model,
+  });
+
+  return result.script;
+}

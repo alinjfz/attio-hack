@@ -33,8 +33,21 @@ export async function textToSpeech(
   }
 
   const buffer = await response.arrayBuffer();
-  const audioBase64 = Buffer.from(buffer).toString("base64");
+  const audioBase64 = arrayBufferToBase64(buffer);
   const contentType = response.headers.get("content-type") ?? "audio/wav";
 
   return { audioBase64, contentType };
+}
+
+/** Works in Attio server runtime (no Node `Buffer`). */
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  if (typeof btoa === "function") {
+    return btoa(binary);
+  }
+  throw new Error("base64 encoding is unavailable in this runtime");
 }

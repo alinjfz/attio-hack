@@ -45,11 +45,13 @@ cd attio-app && pnpm dev
 
 When `pnpm dev` prompts, select your hackathon workspace and install the app. Open any **Person** record to see the **Recruiting Copilot** widget.
 
-Optional — n8n webhook API (isolated from Attio):
+Optional — standalone n8n pipeline (no Attio required):
 
 ```bash
-pnpm api:dev
-# In another terminal: ngrok http 3001
+pnpm api:dev      # webhook API :3001
+pnpm n8n:dev      # n8n UI :5678 (prunes Docker cache first)
+pnpm n8n:import   # import workflow (prunes Docker cache first)
+pnpm n8n:smoke    # test API with sample payload
 ```
 
 Live pipeline smoke test (Superlinked + Gemini):
@@ -76,9 +78,9 @@ Copy `.env.example` to `.env` and fill in:
 | `ENABLE_TAVILY` | core | Feature flag — **`false` by default** | Set `true` only when you want web bullets (uses credits) |
 | `SLNG_API_KEY` | core | TTS audio | [app.slng.ai](https://app.slng.ai) |
 | `ENABLE_SLNG` | core | Feature flag | `true` for audio summary |
-| `WEBHOOK_SECRET` | api/ | n8n auth | Random string |
+| `WEBHOOK_SECRET` | api/ + n8n | n8n auth | Random string — shared by api/ and n8n HTTP nodes |
 | `PORT` | api/ | HTTP port | Default `3001` |
-| `API_PUBLIC_URL` | n8n | Public API URL | ngrok or deploy URL |
+| `API_PUBLIC_URL` | scripts, ngrok | Host-side API URL | `http://localhost:3001` on host; Docker n8n uses `host.docker.internal` automatically |
 
 > Attio server functions receive secrets via the Attio developer dashboard — configure the same keys there for live research.
 
@@ -127,14 +129,15 @@ Triggers when `ENABLE_TAVILY=true` **and** `TAVILY_API_KEY` is set. Off by defau
 
 Docs: [JS quickstart](https://docs.tavily.com/sdk/javascript/quick-start)
 
-### n8n (workflow mirror)
+### n8n (standalone workflow)
 
-Requires Docker for the recommended path:
+Full setup: **[docs/N8N.md](docs/N8N.md)** — webhook payload, approval gate, optional Attio write-back, curl examples.
 
 ```bash
 pnpm api:dev      # webhook API :3001
 pnpm n8n:dev      # n8n UI :5678 via docker compose
 pnpm n8n:import   # import workflow
+pnpm n8n:smoke    # smoke-test API with n8n/sample-payload.json
 ```
 
 Without Docker: `pnpm n8n:dev:npx` and `pnpm n8n:import:npx`.
@@ -247,6 +250,9 @@ Never commit `.env` — only `.env.example` is tracked.
 |-------|-----|
 | SIE "warming up" / timeout | Cluster cold start — wait 5–7 min or pre-warm with `pnpm research:smoke` |
 | `encodeInto: is not implemented yet` | Attio sandbox can't run the msgpack SDK — app uses JSON fetch client (restart `pnpm dev`) |
+| Gemini 400 `additionalProperties` / `$schema` | Fixed via `responseJsonSchema` — restart `pnpm dev` and retry |
+| Blank "Approve research bundle" dialog | Attio requires `<SubmitButton/>` as direct child of `<Form/>` — fixed in approval dialog |
+| Write-back `value_not_found` for fit tier | `fit_tier` had no select options — run `pnpm seed:attio` or add Strong/Good/Weak/Unknown in Attio |
 | Missing Superlinked keys in Attio | Set `superlinked_*` and `gemini_api_key` in workspace app Settings (not build.attio.com) |
 | Missing Role link error | Link Person → Role; ensure Role has `description` |
 | Empty CV error | Paste CV in widget and click **Save CV** |

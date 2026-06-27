@@ -2,6 +2,7 @@ export * from "./config/features.js";
 export * from "./schemas/draft-bundle.js";
 export * from "./schemas/fit-result.js";
 export * from "./schemas/research-input.js";
+export * from "./schemas/writeback-options.js";
 export * from "./clients/attio-rest.js";
 export * from "./clients/gemini.js";
 export * from "./clients/sie.js";

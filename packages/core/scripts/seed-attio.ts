@@ -150,6 +150,47 @@ async function ensureAttribute(
   console.log(`  ✓ Created attribute ${identifier}.${definition.api_slug}`);
 }
 
+async function ensureSelectOptions(
+  identifier: string,
+  attributeSlug: string,
+  titles: string[],
+): Promise<void> {
+  const list = await attioRequest<{ data: Array<{ title: string }> }>(
+    "GET",
+    `/objects/${identifier}/attributes/${attributeSlug}/options`,
+  );
+
+  if (!list.ok) {
+    throw new Error(
+      `Failed to list ${identifier}.${attributeSlug} options: ${list.status} ${list.text}`,
+    );
+  }
+
+  const existing = new Set(
+    (list.data.data ?? []).map((option) => option.title.toLowerCase()),
+  );
+
+  for (const title of titles) {
+    if (existing.has(title.toLowerCase())) {
+      continue;
+    }
+
+    const created = await attioRequest(
+      "POST",
+      `/objects/${identifier}/attributes/${attributeSlug}/options`,
+      { data: { title } },
+    );
+
+    if (!created.ok && created.status !== 409) {
+      throw new Error(
+        `Failed to create select option "${title}" on ${identifier}.${attributeSlug}: ${created.status} ${created.text}`,
+      );
+    }
+
+    console.log(`  ✓ Select option ${identifier}.${attributeSlug}.${title}`);
+  }
+}
+
 async function ensureSchema(roleObjectSlug: string): Promise<void> {
   console.log("\nSchema");
 
@@ -193,6 +234,13 @@ async function ensureSchema(roleObjectSlug: string): Promise<void> {
   ]) {
     await ensureAttribute("objects", "people", attribute);
   }
+
+  await ensureSelectOptions("people", "fit_tier", [
+    "Strong",
+    "Good",
+    "Weak",
+    "Unknown",
+  ]);
 }
 
 async function listRecords(objectSlug: string): Promise<AttioRecord[]> {

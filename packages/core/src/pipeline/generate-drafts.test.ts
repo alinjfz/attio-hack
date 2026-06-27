@@ -16,6 +16,7 @@ const validBundle = {
   hmNote: "Worth a screen — strong full-stack background.",
   clientSubmittalDraft: "I'd like to submit Alex for your senior engineer role...",
   candidateEmailDraft: "Hi Alex, your background looks like a strong match...",
+  rejectionEmailDraft: "Thank you for your interest in the role. After careful review...",
   webBullets: [{ text: "Led CRM migration project", source: "https://example.com/profile" }],
 };
 

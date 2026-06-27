@@ -52,6 +52,7 @@ export function buildDraftPrompt(input: GenerateDraftsInput): string {
     "- hmNote: internal hiring manager note in markdown-friendly prose",
     "- clientSubmittalDraft: client-facing submittal email draft",
     "- candidateEmailDraft: optional outreach/update email draft",
+    "- rejectionEmailDraft: polite personalised rejection email for this role (not sent automatically)",
     "- webBullets: research highlights; include source URLs when available",
   ].join("\n");
 }

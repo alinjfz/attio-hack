@@ -16,6 +16,7 @@ import getCandidateContext from "../graphql/get-candidate-context.graphql";
 import saveCvText from "../server/save-cv-text.server";
 import researchCandidate from "../server/research-candidate.server";
 import { BundlePreview } from "./bundle-preview";
+import draftRejection from "../server/draft-rejection.server";
 import { openApprovalDialog } from "./research-flow";
 import { TierBadge } from "./tier-badge";
 
@@ -72,6 +73,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
     null,
   );
   const [researching, setResearching] = useState(false);
+  const [draftingRejection, setDraftingRejection] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const candidateName = person?.name?.full_name ?? "Candidate";
@@ -130,6 +132,7 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
         recordId,
         candidateName,
         result,
+        roleTitle: roleContext.roleTitle,
         onApproved: () => setRefreshKey((value) => value + 1),
       });
       setPreview(result);
@@ -141,6 +144,38 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
       });
     } finally {
       setResearching(false);
+    }
+  };
+
+  const handleDraftRejection = async () => {
+    if (!hasRole) {
+      await showToast({
+        title: "Missing Role",
+        text: "Link this person to a Role before drafting a rejection.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setDraftingRejection(true);
+    try {
+      const result = await draftRejection(recordId);
+      await openApprovalDialog({
+        recordId,
+        candidateName,
+        result,
+        roleTitle: roleContext.roleTitle,
+        focus: "rejection",
+        onApproved: () => setRefreshKey((value) => value + 1),
+      });
+    } catch (error) {
+      await showToast({
+        title: "Rejection draft failed",
+        text: error instanceof Error ? error.message : "Unknown error",
+        variant: "error",
+      });
+    } finally {
+      setDraftingRejection(false);
     }
   };
 
@@ -173,7 +208,13 @@ function RecruitingCopilotContent({ recordId }: { recordId: string }) {
       <Button
         label={researching ? "Researching…" : "Research candidate"}
         onClick={handleResearch}
-        disabled={researching}
+        disabled={researching || draftingRejection}
+      />
+
+      <Button
+        label={draftingRejection ? "Drafting rejection…" : "Draft rejection"}
+        onClick={handleDraftRejection}
+        disabled={researching || draftingRejection}
       />
 
       {preview && <BundlePreview fit={preview.fit} bundle={preview.bundle} />}

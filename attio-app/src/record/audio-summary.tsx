@@ -1,42 +1,24 @@
 import type { App } from "attio";
 import { Button, Section, Typography, showToast } from "attio/client";
 import { useState } from "react";
-import summarizeList from "../server/summarize-list.server";
+import { batchSummarizeRecruitingList } from "../server/batch-summarize-audio.server";
+import { openAudioPlaylistDialog } from "./audio-playlist-flow";
 
 function AudioSummaryPanel({ recordId }: { recordId: string }) {
   void recordId;
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleListen = async () => {
+  const handleListenToList = async () => {
     setLoading(true);
     try {
-      const result = await summarizeList({
-        candidates: [
-          {
-            name: "Demo Candidate A",
-            fitScore: 88,
-            fitTier: "Strong",
-            twoLiner: "Strong TypeScript engineer with CRM experience.",
-          },
-          {
-            name: "Demo Candidate B",
-            fitScore: 72,
-            fitTier: "Good",
-            twoLiner: "Solid full-stack generalist.",
-          },
-          {
-            name: "Demo Candidate C",
-            fitScore: 61,
-            fitTier: "Good",
-            twoLiner: "Good culture fit, lighter Attio exposure.",
-          },
-        ],
+      const segments = await batchSummarizeRecruitingList();
+      await openAudioPlaylistDialog({
+        title: "Recruiting list audio",
+        segments,
       });
-      setAudioSrc(`data:${result.contentType};base64,${result.audioBase64}`);
       await showToast({
         title: "Audio ready",
-        text: "Press play to hear the top-3 summary.",
+        text: `${segments.length} candidates — plays one by one, highest fit first.`,
         variant: "success",
       });
     } catch (error) {
@@ -53,15 +35,15 @@ function AudioSummaryPanel({ recordId }: { recordId: string }) {
   return (
     <Section title="List audio summary (SLNG)">
       <Typography.Body>
-        Hear a spoken overview of the top 3 candidates by fit score. Requires
-        ENABLE_SLNG=true and SLNG_API_KEY in app secrets.
+        Read every researched candidate on the recruiting list aloud, one by one,
+        sorted by fit score. Requires enable_slng and slng_api_key in app settings.
+        Or select people on a list and use bulk action “Listen to candidates (SLNG)”.
       </Typography.Body>
       <Button
-        label={loading ? "Generating audio…" : "Listen to summary"}
-        onClick={handleListen}
+        label={loading ? "Generating audio…" : "Listen to recruiting list"}
+        onClick={handleListenToList}
         disabled={loading}
       />
-      {audioSrc && <audio controls src={audioSrc} />}
     </Section>
   );
 }

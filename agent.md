@@ -104,7 +104,7 @@ Configure in the hackathon workspace (extend only if missing):
 
 **Fit tiers:** Strong ≥80 · Good 60–79 · Weak 40–59 · Unknown &lt;40 or missing input
 
-**Select option slugs for `fit_tier`:** `strong`, `good`, `weak`, `unknown` (lowercase in REST payloads)
+**Select option titles for `fit_tier`:** `Strong`, `Good`, `Weak`, `Unknown` (must match Attio option titles exactly)
 
 ---
 

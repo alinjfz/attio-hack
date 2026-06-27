@@ -16,7 +16,9 @@
     "./config/env": "./src/config/env.ts",
     "./config/features": "./src/config/features.ts",
     "./pipeline/run-research": "./src/pipeline/run-research.ts",
-    "./pipeline/summarize-list": "./src/pipeline/summarize-list.ts"
+    "./pipeline/apply-writeback": "./src/pipeline/apply-writeback.ts",
+    "./pipeline/summarize-list": "./src/pipeline/summarize-list.ts",
+    "./schemas/writeback-options": "./src/schemas/writeback-options.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

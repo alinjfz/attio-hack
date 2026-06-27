@@ -1,6 +1,6 @@
 import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
 import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
-import { Section, Typography } from "attio/client";
+import { Section, TextBlock } from "attio/client";
 import { TierBadge } from "./tier-badge";
 
 export function BundlePreview({
@@ -14,18 +14,21 @@ export function BundlePreview({
     <>
       <Section title="Fit">
         <TierBadge tier={fit.tier} score={fit.score} />
-        <Typography.Body>{bundle.twoLiner}</Typography.Body>
+        <TextBlock>{bundle.twoLiner || "No summary yet."}</TextBlock>
       </Section>
       <Section title="Pros / cons">
-        {bundle.fitReasoning.pros.map((pro) => (
-          <Typography.Body key={pro}>+ {pro}</Typography.Body>
-        ))}
-        {bundle.fitReasoning.cons.map((con) => (
-          <Typography.Body key={con}>- {con}</Typography.Body>
-        ))}
+        <TextBlock>
+          {bundle.fitReasoning.pros.map((pro) => `+ ${pro}`).join("\n")}
+          {bundle.fitReasoning.pros.length > 0 && bundle.fitReasoning.cons.length > 0 ? "\n" : ""}
+          {bundle.fitReasoning.cons.map((con) => `- ${con}`).join("\n")}
+        </TextBlock>
       </Section>
       <Section title="Submittal preview">
-        <Typography.Body>{bundle.clientSubmittalDraft.slice(0, 280)}…</Typography.Body>
+        <TextBlock>
+          {bundle.clientSubmittalDraft
+            ? `${bundle.clientSubmittalDraft.slice(0, 280)}…`
+            : "No submittal draft."}
+        </TextBlock>
       </Section>
     </>
   );

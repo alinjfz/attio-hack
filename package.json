@@ -11,10 +11,13 @@
     "research:smoke": "pnpm --filter @recruiting-copilot/core research:smoke",
     "seed:attio": "pnpm --filter @recruiting-copilot/core seed:attio",
     "api:dev": "pnpm --filter @recruiting-copilot/api dev",
-    "n8n:dev": "docker compose up n8n",
+    "docker:prune": "sh scripts/docker-prune.sh",
+    "n8n:dev": "sh scripts/docker-prune.sh && docker compose up n8n",
     "n8n:dev:npx": "N8N_USER_FOLDER=./.n8n-data N8N_PORT=5678 npx --yes n8n@latest start",
-    "n8n:import": "docker compose run --rm n8n n8n import:workflow --input=/import/recruiting-copilot.json",
-    "n8n:import:npx": "N8N_USER_FOLDER=./.n8n-data npx --yes n8n@latest import:workflow --input=n8n/recruiting-copilot.json"
+    "n8n:import": "sh scripts/docker-prune.sh && docker compose run --rm n8n import:workflow --input=/import/recruiting-copilot.json",
+    "n8n:import:npx": "N8N_USER_FOLDER=./.n8n-data npx --yes n8n@latest import:workflow --input=n8n/recruiting-copilot.json",
+    "n8n:smoke": "node scripts/n8n-smoke.mjs --api-only",
+    "n8n:test": "node scripts/n8n-smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.4",

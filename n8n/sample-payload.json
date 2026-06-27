@@ -1,0 +1,9 @@
+{
+  "candidateName": "Alex Morgan",
+  "roleTitle": "Senior Full-Stack Engineer",
+  "roleDescription": "Senior Full-Stack Engineer — London (hybrid)\n\nWe need a hands-on senior engineer to own features across our Attio-integrated recruiting stack.\nMust have 5+ years TypeScript, React, and API design experience.\nBonus: semantic search, embeddings, or CRM app development.\nStrong communication for client-facing submittals and HM collaboration.",
+  "cvText": "Senior full-stack engineer with 8 years building TypeScript/React systems at scale.\nLed migration of monolithic CRM extensions to event-driven microservices.\nStrong experience with Node.js, PostgreSQL, AWS, and API design.\nPreviously built recruiting tooling integrating ATS workflows with custom scoring pipelines.\nEducation: BSc Computer Science, University of Manchester.",
+  "linkedinUrl": "https://linkedin.com/in/alex-morgan",
+  "recordId": null,
+  "writeToAttio": false
+}

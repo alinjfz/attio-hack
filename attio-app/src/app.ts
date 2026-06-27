@@ -1,4 +1,5 @@
 import type { App } from "attio";
+import { bulkAudioSummaryAction } from "./actions/bulk-audio-summary";
 import { bulkResearchAction } from "./actions/bulk-research";
 import { researchCandidateAction } from "./actions/research-candidate";
 import { audioSummaryWidget } from "./record/audio-summary";
@@ -9,7 +10,7 @@ import "./app.settings";
 export const app: App = {
   record: {
     actions: [researchCandidateAction],
-    bulkActions: [bulkResearchAction],
+    bulkActions: [bulkResearchAction, bulkAudioSummaryAction],
     widgets: [recruitingCopilotWidget, audioSummaryWidget],
   },
   callRecording: {

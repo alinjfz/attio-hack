@@ -16,6 +16,7 @@ export const DraftBundleSchema = z.object({
   hmNote: z.string(),
   clientSubmittalDraft: z.string(),
   candidateEmailDraft: z.string(),
+  rejectionEmailDraft: z.string(),
   webBullets: z.array(
     z.object({
       text: z.string(),

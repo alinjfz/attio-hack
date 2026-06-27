@@ -9,6 +9,7 @@ const mockBundle = {
   hmNote: "Recommend screen.",
   clientSubmittalDraft: "Submitting Alex for review.",
   candidateEmailDraft: "Hi Alex",
+  rejectionEmailDraft: "Thank you for applying.",
   webBullets: [],
 };
 

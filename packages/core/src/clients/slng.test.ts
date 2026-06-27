@@ -1,11 +1,16 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { textToSpeech } from "./slng.js";
+import { arrayBufferToBase64, textToSpeech } from "./slng.js";
 
 describe("slng client", () => {
   const originalFetch = global.fetch;
 
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  it("arrayBufferToBase64 encodes without Node Buffer", () => {
+    const encoded = arrayBufferToBase64(new Uint8Array([72, 105]).buffer);
+    expect(encoded).toBe("SGk=");
   });
 
   it("textToSpeech resolves with audioBase64 and contentType", async () => {

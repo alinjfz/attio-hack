@@ -16,6 +16,31 @@ export interface GenerateStructuredOptions<T extends z.ZodType> {
   model?: string;
 }
 
+/** Gemini's legacy responseSchema is OpenAPI-only; Zod emits JSON Schema keywords it rejects. */
+export function toGeminiJsonSchema(schema: z.ZodType): Record<string, unknown> {
+  const jsonSchema = zodToJsonSchema(schema, { $refStrategy: "none" });
+  return stripSchemaMetadata(jsonSchema) as Record<string, unknown>;
+}
+
+function stripSchemaMetadata(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stripSchemaMetadata);
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (key === "$schema" || key === "$defs" || key === "definitions") {
+      continue;
+    }
+    result[key] = stripSchemaMetadata(child);
+  }
+  return result;
+}
+
 export function createGeminiClient(config: GeminiClientConfig): GeminiClientLike {
   return { apiKey: config.apiKey };
 }
@@ -25,7 +50,7 @@ export async function generateStructured<T extends z.ZodType>(
   options: GenerateStructuredOptions<T>,
 ): Promise<z.infer<T>> {
   const model = options.model ?? "gemini-2.5-flash";
-  const jsonSchema = zodToJsonSchema(options.schema, { $refStrategy: "none" });
+  const responseJsonSchema = toGeminiJsonSchema(options.schema);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(client.apiKey)}`;
 
   const response = await fetch(url, {
@@ -35,7 +60,7 @@ export async function generateStructured<T extends z.ZodType>(
       contents: [{ parts: [{ text: options.prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: jsonSchema,
+        responseJsonSchema,
       },
     }),
   });

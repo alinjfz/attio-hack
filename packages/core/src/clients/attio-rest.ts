@@ -1,4 +1,12 @@
 import { readEnv } from "../config/env.js";
+import type { FitTier } from "../schemas/fit-result.js";
+
+export const FIT_TIER_OPTION_TITLES: readonly FitTier[] = [
+  "Strong",
+  "Good",
+  "Weak",
+  "Unknown",
+];
 
 export interface AttioRestConfig {
   apiToken: string;
@@ -20,6 +28,9 @@ type AttioValue = {
   value?: string | number;
   target_record_id?: string;
   option?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
 };
 
 type AttioRecordResponse = {
@@ -52,6 +63,132 @@ export function extractRecordReference(
   slug: string,
 ): string | undefined {
   return values?.[slug]?.[0]?.target_record_id;
+}
+
+export function extractNumberValue(
+  values: Record<string, AttioValue[]> | undefined,
+  slug: string,
+): number | undefined {
+  const entry = values?.[slug]?.[0];
+  if (typeof entry?.value === "number") {
+    return entry.value;
+  }
+  if (typeof entry?.value === "string") {
+    const parsed = Number(entry.value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+export function extractSelectOption(
+  values: Record<string, AttioValue[]> | undefined,
+  slug: string,
+): string | undefined {
+  return values?.[slug]?.[0]?.option;
+}
+
+export function extractPersonName(
+  values: Record<string, AttioValue[]> | undefined,
+): string {
+  const nameEntry = values?.name?.[0];
+  if (nameEntry?.full_name) {
+    return nameEntry.full_name;
+  }
+  const parts = [nameEntry?.first_name, nameEntry?.last_name].filter(Boolean);
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+  return extractTextValue(values, "full_name") ?? "Candidate";
+}
+
+export interface PersonAudioSummary {
+  recordId: string;
+  name: string;
+  fitScore: number;
+  fitTier: string;
+  twoLiner?: string;
+}
+
+export async function getPersonAudioSummary(
+  config: AttioRestConfig,
+  recordId: string,
+): Promise<PersonAudioSummary | null> {
+  const person = await getRecord(config, "people", recordId);
+  const values = person.data?.values;
+  const fitScore = extractNumberValue(values, "fit_score");
+  const fitTier = extractSelectOption(values, "fit_tier");
+
+  if (fitScore === undefined || !fitTier) {
+    return null;
+  }
+
+  return {
+    recordId,
+    name: extractPersonName(values),
+    fitScore,
+    fitTier,
+    twoLiner: extractTextValue(values, "two_liner"),
+  };
+}
+
+type AttioListSummary = {
+  id?: { list_id?: string };
+  api_slug?: string;
+  name?: string;
+};
+
+type AttioListEntry = {
+  parent_record_id?: string;
+};
+
+export async function listRecruitingListRecordIds(
+  config: AttioRestConfig,
+  listSlug = "recruiting",
+): Promise<string[]> {
+  const listsResponse = await fetch(`${getBaseUrl(config)}/lists`, {
+    headers: {
+      Authorization: `Bearer ${config.apiToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!listsResponse.ok) {
+    throw new Error(
+      `Attio list lookup failed: ${listsResponse.status} ${await listsResponse.text()}`,
+    );
+  }
+
+  const listsBody = (await listsResponse.json()) as { data?: AttioListSummary[] };
+  const recruitingList = (listsBody.data ?? []).find(
+    (list) =>
+      list.api_slug === listSlug ||
+      list.name?.toLowerCase().includes("recruit"),
+  );
+
+  const listId = recruitingList?.id?.list_id;
+  if (!listId) {
+    throw new Error(`Recruiting list "${listSlug}" was not found in this workspace.`);
+  }
+
+  const entriesResponse = await fetch(`${getBaseUrl(config)}/lists/${listId}/entries/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ limit: 100 }),
+  });
+
+  if (!entriesResponse.ok) {
+    throw new Error(
+      `Attio list entries query failed: ${entriesResponse.status} ${await entriesResponse.text()}`,
+    );
+  }
+
+  const entriesBody = (await entriesResponse.json()) as { data?: AttioListEntry[] };
+  return (entriesBody.data ?? [])
+    .map((entry) => entry.parent_record_id)
+    .filter((recordId): recordId is string => Boolean(recordId));
 }
 
 export async function getRecord(
@@ -128,6 +265,129 @@ export interface CreateNoteInput {
   content: string;
 }
 
+type SelectOption = {
+  title?: string;
+};
+
+async function attioRequest<T>(
+  config: AttioRestConfig,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<{ ok: boolean; status: number; data: T; text: string }> {
+  const response = await fetch(`${getBaseUrl(config)}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${config.apiToken}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+  let data = {} as T;
+  if (text) {
+    try {
+      data = JSON.parse(text) as T;
+    } catch {
+      data = {} as T;
+    }
+  }
+
+  return { ok: response.ok, status: response.status, data, text };
+}
+
+export async function listSelectOptions(
+  config: AttioRestConfig,
+  objectSlug: string,
+  attributeSlug: string,
+): Promise<SelectOption[]> {
+  const response = await attioRequest<{ data?: SelectOption[] }>(
+    config,
+    "GET",
+    `/objects/${objectSlug}/attributes/${attributeSlug}/options`,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Attio list select options failed: ${response.status} ${response.text}`,
+    );
+  }
+
+  return response.data.data ?? [];
+}
+
+export async function createSelectOption(
+  config: AttioRestConfig,
+  objectSlug: string,
+  attributeSlug: string,
+  title: string,
+): Promise<void> {
+  const response = await attioRequest(
+    config,
+    "POST",
+    `/objects/${objectSlug}/attributes/${attributeSlug}/options`,
+    { data: { title } },
+  );
+
+  if (!response.ok && response.status !== 409) {
+    throw new Error(
+      `Attio create select option "${title}" failed: ${response.status} ${response.text}`,
+    );
+  }
+}
+
+export function resolveFitTierOptionTitle(
+  tier: string,
+  availableTitles: string[],
+): string {
+  const match = availableTitles.find(
+    (title) => title.toLowerCase() === tier.toLowerCase(),
+  );
+  if (match) {
+    return match;
+  }
+
+  throw new Error(
+    `No fit_tier option matches "${tier}". Available options: ${availableTitles.join(", ") || "(none)"}`,
+  );
+}
+
+export async function ensureFitTierSelectOptions(
+  config: AttioRestConfig,
+): Promise<string[]> {
+  const existing = await listSelectOptions(config, "people", "fit_tier");
+  const knownTitles = new Set(
+    existing.map((option) => option.title?.toLowerCase()).filter(Boolean),
+  );
+
+  for (const title of FIT_TIER_OPTION_TITLES) {
+    if (!knownTitles.has(title.toLowerCase())) {
+      try {
+        await createSelectOption(config, "people", "fit_tier", title);
+        knownTitles.add(title.toLowerCase());
+      } catch (error) {
+        throw new Error(
+          `fit_tier select options are missing in Attio. Add ${FIT_TIER_OPTION_TITLES.join(", ")} under People → Fit tier, grant object_configuration:read-write to the app token, or run "pnpm seed:attio". ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+  }
+
+  const refreshed = await listSelectOptions(config, "people", "fit_tier");
+  const titles = refreshed
+    .map((option) => option.title)
+    .filter((title): title is string => Boolean(title));
+
+  if (titles.length === 0) {
+    throw new Error(
+      `fit_tier has no select options in Attio. Add ${FIT_TIER_OPTION_TITLES.join(", ")} under People → Fit tier, or run "pnpm seed:attio".`,
+    );
+  }
+
+  return titles;
+}
+
 export function buildPatchPersonPayload(values: PatchPersonValues): {
   data: { values: Record<string, Array<{ value?: number | string; option?: string }>> };
 } {
@@ -137,7 +397,7 @@ export function buildPatchPersonPayload(values: PatchPersonValues): {
     attioValues.fit_score = [{ value: values.fitScore }];
   }
   if (values.fitTier !== undefined) {
-    attioValues.fit_tier = [{ option: values.fitTier.toLowerCase() }];
+    attioValues.fit_tier = [{ option: values.fitTier }];
   }
   if (values.twoLiner !== undefined) {
     attioValues.two_liner = [{ value: values.twoLiner }];
@@ -174,6 +434,12 @@ export async function patchPerson(
   recordId: string,
   values: PatchPersonValues,
 ): Promise<void> {
+  let fitTier = values.fitTier;
+  if (fitTier !== undefined) {
+    const availableTitles = await ensureFitTierSelectOptions(config);
+    fitTier = resolveFitTierOptionTitle(fitTier, availableTitles);
+  }
+
   const response = await fetch(
     `${getBaseUrl(config)}/objects/people/records/${recordId}`,
     {
@@ -182,12 +448,23 @@ export async function patchPerson(
         Authorization: `Bearer ${config.apiToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(buildPatchPersonPayload(values)),
+      body: JSON.stringify(
+        buildPatchPersonPayload({
+          ...values,
+          fitTier,
+        }),
+      ),
     },
   );
 
   if (!response.ok) {
-    throw new Error(`Attio PATCH failed: ${response.status} ${await response.text()}`);
+    const body = await response.text();
+    if (body.includes("value_not_found") && body.includes("select option")) {
+      throw new Error(
+        `Attio PATCH failed: fit_tier select options are missing or misnamed. Ensure People → Fit tier has options ${FIT_TIER_OPTION_TITLES.join(", ")} (run "pnpm seed:attio"). ${body}`,
+      );
+    }
+    throw new Error(`Attio PATCH failed: ${response.status} ${body}`);
   }
 }
 
@@ -227,4 +504,42 @@ export function buildHmNoteContent(
   ];
 
   return sections.join("\n");
+}
+
+export function buildRejectionEmailNoteContent(rejectionEmailDraft: string): string {
+  return [
+    "Draft only — nothing was sent automatically.",
+    "",
+    rejectionEmailDraft,
+  ].join("\n");
+}
+
+export function buildSilverMedalistNoteContent(input: {
+  candidateName: string;
+  roleTitle?: string;
+  fitScore: number;
+  fitTier: string;
+  pros: string[];
+  cons: string[];
+}): string {
+  const roleLabel = input.roleTitle ?? "this role";
+  const sections = [
+    `**${input.candidateName}** is not moving forward for **${roleLabel}**, but worth keeping warm for future roles.`,
+    "",
+    `**Fit:** ${input.fitScore}% (${input.fitTier})`,
+    "",
+    "### Why not this role",
+    ...(input.cons.length > 0 ? input.cons.map((con) => `- ${con}`) : ["- No major blockers logged."]),
+    "",
+    "### Highlights for future",
+    ...(input.pros.length > 0 ? input.pros.map((pro) => `- ${pro}`) : ["- Strong general profile."]),
+    "",
+    "_Logged by Recruiting Copilot — no outreach sent._",
+  ];
+
+  return sections.join("\n");
+}
+
+export function buildAudioSummaryNoteContent(script: string): string {
+  return ["Spoken summary script (SLNG):", "", script].join("\n");
 }

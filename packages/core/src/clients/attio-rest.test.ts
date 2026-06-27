@@ -3,8 +3,11 @@ import {
   buildCreateNotePayload,
   buildHmNoteContent,
   buildPatchPersonPayload,
+  buildRejectionEmailNoteContent,
+  buildSilverMedalistNoteContent,
   extractRecordReference,
   extractTextValue,
+  resolveFitTierOptionTitle,
 } from "./attio-rest.js";
 
 describe("attio-rest payload builders", () => {
@@ -16,7 +19,7 @@ describe("attio-rest payload builders", () => {
     });
 
     expect(payload.data.values.fit_score).toEqual([{ value: 82 }]);
-    expect(payload.data.values.fit_tier).toEqual([{ option: "strong" }]);
+    expect(payload.data.values.fit_tier).toEqual([{ option: "Strong" }]);
     expect(payload.data.values.two_liner).toEqual([
       { value: "Strong TypeScript engineer." },
     ]);
@@ -40,6 +43,22 @@ describe("attio-rest payload builders", () => {
     expect(content).toContain("- No Attio");
   });
 
+  it("builds rejection and silver medalist note content", () => {
+    expect(buildRejectionEmailNoteContent("Thanks for applying.")).toContain(
+      "Thanks for applying.",
+    );
+    expect(
+      buildSilverMedalistNoteContent({
+        candidateName: "Alex",
+        roleTitle: "Senior Engineer",
+        fitScore: 72,
+        fitTier: "Good",
+        pros: ["TypeScript"],
+        cons: ["No Attio"],
+      }),
+    ).toContain("future roles");
+  });
+
   it("extracts text and record reference values", () => {
     const values = {
       cv_text: [{ value: "Engineer CV" }],
@@ -48,5 +67,13 @@ describe("attio-rest payload builders", () => {
 
     expect(extractTextValue(values, "cv_text")).toBe("Engineer CV");
     expect(extractRecordReference(values, "role")).toBe("role_123");
+  });
+
+  it("resolveFitTierOptionTitle matches case-insensitively", () => {
+    expect(resolveFitTierOptionTitle("good", ["Strong", "Good", "Weak"])).toBe("Good");
+  });
+
+  it("resolveFitTierOptionTitle throws when option is missing", () => {
+    expect(() => resolveFitTierOptionTitle("Good", [])).toThrow(/No fit_tier option/);
   });
 });

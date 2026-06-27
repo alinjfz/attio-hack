@@ -1,7 +1,19 @@
 {
-  "id": "1",
-  "name": "Recruiting Copilot — n8n mirror",
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "Recruiting Copilot — standalone pipeline",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Recruiting Copilot (standalone)\n\n**Trigger:** POST JSON to this webhook.\n\n**Required:** `candidateName`, `roleDescription`, `cvText`\n\n**Optional:** `roleTitle`, `linkedinUrl`, `recordId` (Attio person UUID), `writeToAttio` (default true when recordId set)\n\n**Flow:** normalize → research API → full review package → **manual approval form** → optional Attio write-back → final JSON response.\n\n**Env vars** (Docker loads from repo `.env`): `API_PUBLIC_URL`, `WEBHOOK_SECRET`\n\nSample body: `n8n/sample-payload.json` · Test API only: `pnpm n8n:smoke`",
+        "height": 340,
+        "width": 420
+      },
+      "id": "note-overview",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 80]
+    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -13,18 +25,39 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [260, 300]
+      "position": [260, 460],
+      "webhookId": "recruiting-copilot"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body ?? raw;\n\nconst required = ['roleDescription', 'cvText', 'candidateName'];\nconst missing = required.filter((k) => !body[k] || String(body[k]).trim() === '');\nif (missing.length) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nconst recordId = body.recordId ?? null;\nconst writeToAttio = body.writeToAttio !== false && Boolean(recordId);\n\nreturn [{\n  json: {\n    recordId,\n    roleDescription: String(body.roleDescription).trim(),\n    cvText: String(body.cvText).trim(),\n    candidateName: String(body.candidateName).trim(),\n    linkedinUrl: body.linkedinUrl ?? null,\n    roleTitle: body.roleTitle ?? null,\n    writeToAttio,\n    receivedAt: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "normalize-input",
+      "name": "Normalize input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Normalize input').first().json;\nreturn [{\n  json: {\n    recordId: input.recordId,\n    roleDescription: input.roleDescription,\n    cvText: input.cvText,\n    candidateName: input.candidateName,\n    linkedinUrl: input.linkedinUrl,\n    roleTitle: input.roleTitle,\n    approve: false,\n  },\n}];"
+      },
+      "id": "prepare-research-body",
+      "name": "Prepare research body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 460]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.API_PUBLIC_URL}}/webhook/research",
+        "url": "={{ $env.API_PUBLIC_URL }}/webhook/research",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-Webhook-Secret",
-              "value": "={{$env.WEBHOOK_SECRET}}"
+              "value": "={{ $env.WEBHOOK_SECRET }}"
             },
             {
               "name": "Content-Type",
@@ -34,44 +67,210 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"recordId\": \"{{$json.body.recordId}}\",\n  \"roleDescription\": \"{{$json.body.roleDescription}}\",\n  \"cvText\": \"{{$json.body.cvText}}\",\n  \"candidateName\": \"{{$json.body.candidateName}}\",\n  \"linkedinUrl\": \"{{$json.body.linkedinUrl}}\"\n}"
-      },
-      "id": "http-research",
-      "name": "Call recruiting API",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [520, 300]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "summary",
-              "name": "reviewSummary",
-              "value": "=Fit {{$json.fit.score}}% ({{$json.fit.tier}}) — {{$json.bundle.twoLiner}}",
-              "type": "string"
-            }
-          ]
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 300000
         }
       },
-      "id": "format-bundle",
-      "name": "Format for review",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [760, 300]
+      "id": "http-research",
+      "name": "Run research API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 460]
     },
     {
       "parameters": {
-        "content": "## Manual approval required\n\nReview the bundle in Attio or approve via a follow-up HTTP node.\n\nNothing auto-sends.",
-        "height": 220,
-        "width": 360
+        "jsCode": "const input = $('Normalize input').first().json;\nconst research = $('Run research API').first().json;\nconst { fit, bundle } = research;\n\nconst lines = (items, prefix) =>\n  (items ?? []).map((t, i) => `${prefix}${i + 1}. ${t}`).join('\\n') || `${prefix}(none)`;\n\nconst gaps = (bundle.gapAnalysis ?? [])\n  .map((g) => `- **${g.area}** [${g.severity}]: ${g.gap}`)\n  .join('\\n') || '- (none identified)';\n\nconst web = (bundle.webBullets ?? [])\n  .map((b) => `- ${b.text}${b.source ? ` (${b.source})` : ''}`)\n  .join('\\n') || '- (no web enrichment — set ENABLE_TAVILY=true on API)';\n\nconst reviewMarkdown = [\n  `# Candidate review: ${input.candidateName}`,\n  '',\n  `**Fit:** ${fit.score}% — **${fit.tier}** (raw similarity ${fit.rawSimilarity?.toFixed?.(3) ?? fit.rawSimilarity})`,\n  '',\n  '## Two-liner',\n  bundle.twoLiner,\n  '',\n  '## Pros',\n  lines(bundle.fitReasoning?.pros, ''),\n  '',\n  '## Cons',\n  lines(bundle.fitReasoning?.cons, ''),\n  '',\n  '## Gap analysis',\n  gaps,\n  '',\n  '## HM internal note',\n  bundle.hmNote,\n  '',\n  '## Client submittal draft',\n  bundle.clientSubmittalDraft,\n  '',\n  '## Candidate email draft',\n  bundle.candidateEmailDraft,\n  '',\n  '## Web / LinkedIn bullets',\n  web,\n].join('\\n');\n\nreturn [{\n  json: {\n    candidateName: input.candidateName,\n    recordId: input.recordId,\n    roleTitle: input.roleTitle,\n    linkedinUrl: input.linkedinUrl,\n    writeToAttio: input.writeToAttio,\n    fitScore: fit.score,\n    fitTier: fit.tier,\n    rawSimilarity: fit.rawSimilarity,\n    twoLiner: bundle.twoLiner,\n    pros: bundle.fitReasoning?.pros ?? [],\n    cons: bundle.fitReasoning?.cons ?? [],\n    gapAnalysis: bundle.gapAnalysis ?? [],\n    hmNote: bundle.hmNote,\n    clientSubmittalDraft: bundle.clientSubmittalDraft,\n    candidateEmailDraft: bundle.candidateEmailDraft,\n    webBullets: bundle.webBullets ?? [],\n    reviewMarkdown,\n    reviewSummary: `Fit ${fit.score}% (${fit.tier}) — ${bundle.twoLiner}`,\n    research,\n    input,\n  },\n}];"
       },
-      "id": "manual-approval",
-      "name": "Manual approval",
+      "id": "build-review",
+      "name": "Build full review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1220, 460]
+    },
+    {
+      "parameters": {
+        "content": "## Manual approval gate\n\nExecution pauses here. Open the **form URL** from this node, review `reviewMarkdown`, then submit:\n\n- **Approve** → continues (Attio write-back if `recordId` set)\n- **Reject** → workflow ends with rejection payload\n\nNothing is sent to a client or CRM until you approve.",
+        "height": 260,
+        "width": 380
+      },
+      "id": "note-approval",
+      "name": "Note approval",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [980, 180]
+      "position": [1420, 200]
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Approve candidate research?",
+        "formDescription": "={{ $json.reviewSummary }}\\n\\nOpen the execution data panel for the full reviewMarkdown if you need more detail.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  { "option": "approve" },
+                  { "option": "reject" }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Reviewer notes (optional)",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wait-approval",
+      "name": "Wait for approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1460, 460]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $('Wait for approval').item.json.Decision }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-approved",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1700, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\n\nreturn [{\n  json: {\n    status: 'rejected',\n    candidateName: review.candidateName,\n    fitScore: review.fitScore,\n    fitTier: review.fitTier,\n    reviewSummary: review.reviewSummary,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Research completed but not approved — nothing written to Attio or sent externally.',\n    reviewMarkdown: review.reviewMarkdown,\n  },\n}];"
+      },
+      "id": "rejected-output",
+      "name": "Rejected output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1940, 620]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-record",
+              "leftValue": "={{ $('Build full review').item.json.writeToAttio }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-attio",
+      "name": "Write to Attio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1940, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "const review = $('Build full review').first().json;\nconst input = review.input;\nreturn [{\n  json: {\n    recordId: input.recordId,\n    roleDescription: input.roleDescription,\n    cvText: input.cvText,\n    candidateName: input.candidateName,\n    linkedinUrl: input.linkedinUrl,\n    roleTitle: input.roleTitle,\n    approve: true,\n  },\n}];"
+      },
+      "id": "prepare-approve-body",
+      "name": "Prepare Attio write-back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2180, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_PUBLIC_URL }}/webhook/research",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.WEBHOOK_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "http-approve",
+      "name": "Attio write-back API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\nconst attio = $('Attio write-back API').first().json;\n\nreturn [{\n  json: {\n    status: 'approved',\n    mode: 'attio_writeback',\n    candidateName: review.candidateName,\n    recordId: review.recordId,\n    fitScore: attio.fit?.score ?? review.fitScore,\n    fitTier: attio.fit?.tier ?? review.fitTier,\n    twoLiner: attio.bundle?.twoLiner ?? review.twoLiner,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Approved — fit fields and HM note written to Attio via API (requires ATTIO_API_TOKEN on api/).',\n    reviewMarkdown: review.reviewMarkdown,\n    clientSubmittalDraft: review.clientSubmittalDraft,\n    candidateEmailDraft: review.candidateEmailDraft,\n    attioResult: attio,\n  },\n}];"
+      },
+      "id": "attio-success",
+      "name": "Attio approved output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const review = $('Build full review').first().json;\nconst decision = $('Wait for approval').first().json;\n\nreturn [{\n  json: {\n    status: 'approved',\n    mode: 'standalone',\n    candidateName: review.candidateName,\n    fitScore: review.fitScore,\n    fitTier: review.fitTier,\n    twoLiner: review.twoLiner,\n    pros: review.pros,\n    cons: review.cons,\n    gapAnalysis: review.gapAnalysis,\n    hmNote: review.hmNote,\n    clientSubmittalDraft: review.clientSubmittalDraft,\n    candidateEmailDraft: review.candidateEmailDraft,\n    webBullets: review.webBullets,\n    reviewerNotes: decision['Reviewer notes (optional)'] ?? null,\n    message: 'Approved — standalone mode (no recordId). Copy drafts from this JSON or wire Slack/Email nodes here.',\n    reviewMarkdown: review.reviewMarkdown,\n    reviewSummary: review.reviewSummary,\n  },\n}];"
+      },
+      "id": "standalone-success",
+      "name": "Standalone approved output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2180, 460]
+    },
+    {
+      "parameters": {
+        "content": "## Optional next steps (add your own nodes)\n\nAfter **Standalone approved output**, chain:\n- **Slack** — post `reviewMarkdown`\n- **Gmail** — send `clientSubmittalDraft` as draft\n- **Google Sheets** — log fit scores\n- **HTTP** — push to your ATS\n\nAttio path requires `recordId` + `ATTIO_API_TOKEN` in api/ `.env`.",
+        "height": 240,
+        "width": 360
+      },
+      "id": "note-integrations",
+      "name": "Note integrations",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [2620, 40]
     }
   ],
   "connections": {
@@ -79,18 +278,120 @@
       "main": [
         [
           {
-            "node": "Call recruiting API",
+            "node": "Normalize input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Call recruiting API": {
+    "Normalize input": {
       "main": [
         [
           {
-            "node": "Format for review",
+            "node": "Prepare research body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare research body": {
+      "main": [
+        [
+          {
+            "node": "Run research API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run research API": {
+      "main": [
+        [
+          {
+            "node": "Build full review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build full review": {
+      "main": [
+        [
+          {
+            "node": "Wait for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for approval": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Write to Attio?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Attio?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Attio write-back",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Standalone approved output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Attio write-back": {
+      "main": [
+        [
+          {
+            "node": "Attio write-back API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attio write-back API": {
+      "main": [
+        [
+          {
+            "node": "Attio approved output",
             "type": "main",
             "index": 0
           }
@@ -102,7 +403,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "recruiting-copilot-v1",
+  "versionId": "recruiting-copilot-v2",
   "meta": {
     "templateCredsSetupCompleted": false
   },
