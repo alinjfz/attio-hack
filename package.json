@@ -1,0 +1,19 @@
+{
+  "name": "recruiting-copilot",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "pnpm --filter attio-app dev",
+    "build": "pnpm -r build",
+    "research:smoke": "pnpm --filter @recruiting-copilot/core research:smoke",
+    "api:dev": "pnpm --filter @recruiting-copilot/api dev"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.4",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

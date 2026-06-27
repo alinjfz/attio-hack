@@ -1,0 +1,4 @@
+packages:
+  - "packages/*"
+  - "attio-app"
+  - "api"

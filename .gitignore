@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
 
 # Build output
 dist/
@@ -50,3 +51,8 @@ coverage/
 .cache/
 .turbo/
 .vercel/
+.attio/
+lib/
+
+# mine
+mydocs/

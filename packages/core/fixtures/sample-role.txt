@@ -1,0 +1,6 @@
+Senior Full-Stack Engineer — London (hybrid)
+
+We need a hands-on senior engineer to own features across our Attio-integrated recruiting stack.
+Must have 5+ years TypeScript, React, and API design experience.
+Bonus: semantic search, embeddings, or CRM app development.
+Strong communication for client-facing submittals and HM collaboration.

@@ -1,0 +1,5 @@
+Senior full-stack engineer with 8 years building TypeScript/React systems at scale.
+Led migration of monolithic CRM extensions to event-driven microservices.
+Strong experience with Node.js, PostgreSQL, AWS, and API design.
+Previously built recruiting tooling integrating ATS workflows with custom scoring pipelines.
+Education: BSc Computer Science, University of Manchester.
