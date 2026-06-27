@@ -2,8 +2,8 @@ import { ATTIO_API_TOKEN } from "attio/server";
 import {
   createGeminiClient,
   createSIEClient,
+  createTavilyClient,
   getPersonContext,
-  patchPerson,
   type ResearchResult,
   runResearch,
 } from "@recruiting-copilot/core";
@@ -37,6 +37,11 @@ export default async function researchCandidate(recordId: string): Promise<Resea
     model,
   });
 
+  const tavilyClient =
+    process.env.ENABLE_TAVILY === "true" && process.env.TAVILY_API_KEY
+      ? createTavilyClient({ apiKey: process.env.TAVILY_API_KEY })
+      : undefined;
+
   return runResearch(
     {
       roleDescription: context.roleDescription,
@@ -51,6 +56,7 @@ export default async function researchCandidate(recordId: string): Promise<Resea
         geminiClient: createGeminiClient({ apiKey: geminiKey }),
         model: process.env.GEMINI_MODEL,
       },
+      tavilyClient,
     },
   );
 }

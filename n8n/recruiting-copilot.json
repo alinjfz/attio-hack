@@ -1,0 +1,109 @@
+{
+  "name": "Recruiting Copilot — n8n mirror",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recruiting-copilot",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_PUBLIC_URL}}/webhook/research",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{$env.WEBHOOK_SECRET}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recordId\": \"{{$json.recordId}}\",\n  \"roleDescription\": \"{{$json.roleDescription}}\",\n  \"cvText\": \"{{$json.cvText}}\",\n  \"candidateName\": \"{{$json.candidateName}}\",\n  \"linkedinUrl\": \"{{$json.linkedinUrl}}\"\n}"
+      },
+      "id": "http-research",
+      "name": "Call recruiting API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary",
+              "name": "reviewSummary",
+              "value": "=Fit {{$json.fit.score}}% ({{$json.fit.tier}}) — {{$json.bundle.twoLiner}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "format-bundle",
+      "name": "Format for review",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Manual approval required\n\nReview the bundle in Attio or approve via a follow-up HTTP node.\n\nNothing auto-sends.",
+        "height": 220,
+        "width": 360
+      },
+      "id": "manual-approval",
+      "name": "Manual approval",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [980, 180]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call recruiting API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call recruiting API": {
+      "main": [
+        [
+          {
+            "node": "Format for review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "recruiting-copilot-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

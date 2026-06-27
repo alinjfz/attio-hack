@@ -6,6 +6,8 @@ export * from "./clients/gemini.js";
 export * from "./clients/sie.js";
 export * from "./clients/slng.js";
 export * from "./clients/tavily.js";
+export * from "./pipeline/enrich.js";
 export * from "./pipeline/generate-drafts.js";
 export * from "./pipeline/run-research.js";
 export * from "./pipeline/score-fit.js";
+export * from "./pipeline/summarize-list.js";
