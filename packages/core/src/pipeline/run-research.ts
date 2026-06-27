@@ -3,7 +3,7 @@ import type { ResearchInput } from "../schemas/research-input.js";
 import type { ResearchResult } from "../schemas/draft-bundle.js";
 import { enrichCandidateContext } from "./enrich.js";
 import { generateDrafts, type GenerateDraftsDeps } from "./generate-drafts.js";
-import { scoreFit, type ScoreFitDeps } from "./score-fit.js";
+import { finalizeFitScore, scoreFit, type ScoreFitDeps } from "./score-fit.js";
 
 export interface RunResearchDeps {
   scoreFit: ScoreFitDeps;
@@ -20,6 +20,7 @@ export async function runResearch(
     {
       roleDescription: input.roleDescription,
       cvText: input.cvText,
+      roleTitle: input.roleTitle,
     },
     deps.scoreFit,
   );
@@ -36,7 +37,9 @@ export async function runResearch(
     deps.generateDrafts,
   );
 
-  return { fit, bundle };
+  const finalFit = finalizeFitScore(fit, bundle.gapAnalysis);
+
+  return { fit: finalFit, bundle };
 }
 
 export { enrichCandidateContext } from "./enrich.js";

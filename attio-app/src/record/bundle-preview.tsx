@@ -1,6 +1,7 @@
 import type { DraftBundle } from "@recruiting-copilot/core/schemas/draft-bundle";
 import type { FitResult } from "@recruiting-copilot/core/schemas/fit-result";
 import { Section, TextBlock } from "attio/client";
+import { formatBulletSection } from "./format-bullets";
 import { DraftTextBlock } from "./format-prose";
 import { TierBadge } from "./tier-badge";
 
@@ -11,9 +12,6 @@ export function BundlePreview({
   fit: FitResult;
   bundle: DraftBundle;
 }) {
-  const prosLines = bundle.fitReasoning.pros.map((pro) => `+ ${pro}`).join("\n");
-  const consLines = bundle.fitReasoning.cons.map((con) => `- ${con}`).join("\n");
-
   return (
     <>
       <Section title="Fit">
@@ -22,9 +20,9 @@ export function BundlePreview({
       </Section>
       <Section title="Pros / cons">
         <TextBlock>
-          {prosLines}
-          {prosLines && consLines ? "\n\n" : ""}
-          {consLines || "No pros or cons listed."}
+          {formatBulletSection("Pros", bundle.fitReasoning.pros, "No pros listed.")}
+          {"\n\n"}
+          {formatBulletSection("Cons", bundle.fitReasoning.cons, "No cons listed.")}
         </TextBlock>
       </Section>
       <Section title="Submittal preview">

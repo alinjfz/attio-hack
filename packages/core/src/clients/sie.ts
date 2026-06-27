@@ -23,6 +23,11 @@ export interface SIEClientLike {
     input: { text: string },
     options?: { isQuery?: boolean },
   ): Promise<{ dense?: Float32Array }>;
+  encodeBatch?(
+    model: string,
+    inputs: { text: string }[],
+    options?: { isQuery?: boolean },
+  ): Promise<Array<{ dense?: Float32Array }>>;
 }
 
 interface JsonDenseVector {
@@ -138,6 +143,87 @@ export function createFetchSIEClient(config: FetchSIEClientOptions): SIEClientLi
         return { dense: Float32Array.from(values) };
       }
     },
+
+    async encodeBatch(model, inputs, options) {
+      if (inputs.length === 0) {
+        return [];
+      }
+
+      const body: Record<string, unknown> = {
+        items: inputs,
+      };
+
+      if (options?.isQuery !== undefined) {
+        body.params = { is_query: options.isQuery };
+      }
+
+      const url = `${baseUrl}/v1/encode/${encodeURIComponent(model)}`;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+      if (config.apiKey) {
+        headers.Authorization = `Bearer ${config.apiKey}`;
+      }
+
+      const startTime = Date.now();
+
+      while (true) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") {
+            throw new Error(`Superlinked request timed out after ${timeout}ms`);
+          }
+          throw error;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (response.status === 202) {
+          if (!waitForCapacity) {
+            throw new Error("Superlinked cluster has no capacity. Try again in a few minutes.");
+          }
+          const elapsed = Date.now() - startTime;
+          if (elapsed >= provisionTimeout) {
+            throw new Error(
+              `Superlinked cluster is still warming up. Pre-warm with "pnpm research:smoke", then retry.`,
+            );
+          }
+          const delay = Math.min(parseRetryAfterMs(response), provisionTimeout - elapsed);
+          await sleep(delay);
+          continue;
+        }
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Superlinked encode failed (${response.status}): ${text.slice(0, 200)}`);
+        }
+
+        const data = (await response.json()) as JsonEncodeResponse;
+        const items = data.items ?? [];
+        if (items.length !== inputs.length) {
+          throw new Error("SIE batch encode returned unexpected item count");
+        }
+
+        return items.map((item) => {
+          const batchValues = item.dense?.values;
+          if (!batchValues?.length) {
+            throw new Error("SIE batch encode returned no dense embedding");
+          }
+          return { dense: Float32Array.from(batchValues) };
+        });
+      }
+    },
   };
 }
 
@@ -185,4 +271,31 @@ export async function encodeText(
     throw new Error("SIE encode returned no dense embedding");
   }
   return { dense: result.dense };
+}
+
+export async function encodeTexts(
+  client: SIEClientLike,
+  model: string,
+  texts: string[],
+  options?: { isQuery?: boolean },
+): Promise<EncodeResult[]> {
+  if (texts.length === 0) {
+    return [];
+  }
+
+  if (client.encodeBatch) {
+    const results = await client.encodeBatch(
+      model,
+      texts.map((text) => ({ text })),
+      options,
+    );
+    return results.map((result) => {
+      if (!result.dense) {
+        throw new Error("SIE encode returned no dense embedding");
+      }
+      return { dense: result.dense };
+    });
+  }
+
+  return Promise.all(texts.map((text) => encodeText(client, model, text, options)));
 }

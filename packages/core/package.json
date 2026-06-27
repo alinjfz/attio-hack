@@ -21,6 +21,7 @@
     "./pipeline/summarize-list": "./src/pipeline/summarize-list.ts",
     "./schemas/writeback-options": "./src/schemas/writeback-options.ts",
     "./utils/format-prose": "./src/utils/format-prose.ts",
+    "./utils/format-gap-analysis": "./src/utils/format-gap-analysis.ts",
     "./utils/split-tts-script": "./src/utils/split-tts-script.ts",
     "./utils/audio-hosting-errors": "./src/utils/audio-hosting-errors.ts"
   },

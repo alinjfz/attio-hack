@@ -37,6 +37,7 @@ describe("runResearch", () => {
       },
     );
 
+    expect(result.fit.score).toBe(100);
     expect(result.fit.tier).toBe("Strong");
     expect(result.bundle.twoLiner).toContain("Strong match");
     expect(result.bundle.clientSubmittalDraft).toBeTruthy();

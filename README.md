@@ -15,10 +15,10 @@
 4. Fields populate; list re-sorts by `fit_score`.
 5. **Bulk-research** two more candidates → top fit is obvious on the list.
 6. Flash the **client submittal draft** — emphasize nothing is sent without approval.
-7. *(Optional)* Click **Listen to summary** (SLNG) for a spoken top-3 overview.
-8. *(Optional)* Show n8n workflow screenshot / live webhook trigger.
+7. Click **Listen to summary** (SLNG) for a spoken top-3 overview.
+8. Show n8n workflow screenshot / live webhook trigger.
 
-**Close:** *"Attio holds the context. We research, score fit, and draft what you need — nothing hits the CRM until you approve."*
+**Close:** _"Attio holds the context. We research, score fit, and draft what you need — nothing hits the CRM until you approve."_
 
 ---
 
@@ -66,21 +66,21 @@ pnpm research:smoke
 
 Copy `.env.example` to `.env` and fill in:
 
-| Variable | Required | Used by | Description |
-|----------|----------|---------|-------------|
-| `ATTIO_API_TOKEN` | api/ + local REST | Attio REST write-back | From [build.attio.com](https://build.attio.com) |
-| `SUPERLINKED_API_KEY` | core | Fit scoring | Hackathon Discord / @filipmakraduli |
-| `SUPERLINKED_CLUSTER_URL` | core | SIE cluster endpoint | Hackathon cluster URL (not localhost) |
-| `SUPERLINKED_MODEL` | core | Embedding model | Default `BAAI/bge-m3` |
-| `GEMINI_API_KEY` | core | Draft generation | [Google AI Studio](https://aistudio.google.com) |
-| `GEMINI_MODEL` | core | LLM model | Default `gemini-2.5-flash` |
-| `TAVILY_API_KEY` | core | Web enrichment (optional) | [tavily.com](https://tavily.com) |
-| `ENABLE_TAVILY` | core | Feature flag — **`false` by default** | Set `true` only when you want web bullets (uses credits) |
-| `SLNG_API_KEY` | core | TTS audio | [app.slng.ai](https://app.slng.ai) |
-| `ENABLE_SLNG` | core | Feature flag | `true` for audio summary |
-| `WEBHOOK_SECRET` | api/ + n8n | n8n auth | Random string — shared by api/ and n8n HTTP nodes |
-| `PORT` | api/ | HTTP port | Default `3001` |
-| `API_PUBLIC_URL` | scripts, ngrok | Host-side API URL | `http://localhost:3001` on host; Docker n8n uses `host.docker.internal` automatically |
+| Variable                  | Required          | Used by                               | Description                                                                           |
+| ------------------------- | ----------------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| `ATTIO_API_TOKEN`         | api/ + local REST | Attio REST write-back                 | From [build.attio.com](https://build.attio.com)                                       |
+| `SUPERLINKED_API_KEY`     | core              | Fit scoring                           | Hackathon Discord / @filipmakraduli                                                   |
+| `SUPERLINKED_CLUSTER_URL` | core              | SIE cluster endpoint                  | Hackathon cluster URL (not localhost)                                                 |
+| `SUPERLINKED_MODEL`       | core              | Embedding model                       | Default `BAAI/bge-m3`                                                                 |
+| `GEMINI_API_KEY`          | core              | Draft generation                      | [Google AI Studio](https://aistudio.google.com)                                       |
+| `GEMINI_MODEL`            | core              | LLM model                             | Default `gemini-2.5-flash`                                                            |
+| `TAVILY_API_KEY`          | core              | Web enrichment (optional)             | [tavily.com](https://tavily.com)                                                      |
+| `ENABLE_TAVILY`           | core              | Feature flag — **`false` by default** | Set `true` only when you want web bullets (uses credits)                              |
+| `SLNG_API_KEY`            | core              | TTS audio                             | [app.slng.ai](https://app.slng.ai)                                                    |
+| `ENABLE_SLNG`             | core              | Feature flag                          | `true` for audio summary                                                              |
+| `WEBHOOK_SECRET`          | api/ + n8n        | n8n auth                              | Random string — shared by api/ and n8n HTTP nodes                                     |
+| `PORT`                    | api/              | HTTP port                             | Default `3001`                                                                        |
+| `API_PUBLIC_URL`          | scripts, ngrok    | Host-side API URL                     | `http://localhost:3001` on host; Docker n8n uses `host.docker.internal` automatically |
 
 > Attio server functions receive secrets via the Attio developer dashboard — configure the same keys there for live research.
 
@@ -188,15 +188,15 @@ Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · API: [docs/API.md](
 
 ## Partner technology usage
 
-| Feature | Attio | Superlinked | Gemini | Tavily | n8n | SLNG |
-|---------|-------|-------------|--------|--------|-----|------|
-| Data model + UI | ✓ | | | | | |
-| Fit % + tier | | ✓ | | | | |
-| Pros/cons, gaps, drafts | | | ✓ | | | |
-| Web bullets w/ sources | | | ✓ | ✓ | | |
-| Approval write-back | ✓ | | | | | |
-| Isolated webhook flow | ✓ | ✓ | ✓ | ✓ | ✓ | |
-| Audio list summary | | | ✓ | | | ✓ |
+| Feature                 | Attio | Superlinked | Gemini | Tavily | n8n | SLNG |
+| ----------------------- | ----- | ----------- | ------ | ------ | --- | ---- |
+| Data model + UI         | ✓     |             |        |        |     |      |
+| Fit % + tier            |       | ✓           |        |        |     |      |
+| Pros/cons, gaps, drafts |       |             | ✓      |        |     |      |
+| Web bullets w/ sources  |       |             | ✓      | ✓      |     |      |
+| Approval write-back     | ✓     |             |        |        |     |      |
+| Isolated webhook flow   | ✓     | ✓           | ✓      | ✓      | ✓   |      |
+| Audio list summary      |       |             | ✓      |        |     | ✓    |
 
 ---
 
@@ -221,14 +221,14 @@ pnpm test                 # Vitest — fit tiers, Zod bundles, webhook auth, Tav
 pnpm research:smoke       # Live Superlinked + Gemini (requires .env keys)
 ```
 
-| Test | Command / location |
-|------|-------------------|
-| Fit tier boundaries | `packages/core/src/pipeline/score-fit.test.ts` |
-| Draft bundle schema | `packages/core/src/pipeline/generate-drafts.test.ts` |
-| Pipeline orchestration | `packages/core/src/pipeline/run-research.test.ts` |
-| Tavily trigger logic | `packages/core/src/clients/tavily.test.ts` |
-| Attio payload builders | `packages/core/src/clients/attio-rest.test.ts` |
-| Webhook auth | `api/src/index.test.ts` |
+| Test                   | Command / location                                   |
+| ---------------------- | ---------------------------------------------------- |
+| Fit tier boundaries    | `packages/core/src/pipeline/score-fit.test.ts`       |
+| Draft bundle schema    | `packages/core/src/pipeline/generate-drafts.test.ts` |
+| Pipeline orchestration | `packages/core/src/pipeline/run-research.test.ts`    |
+| Tavily trigger logic   | `packages/core/src/clients/tavily.test.ts`           |
+| Attio payload builders | `packages/core/src/clients/attio-rest.test.ts`       |
+| Webhook auth           | `api/src/index.test.ts`                              |
 
 ---
 
@@ -238,7 +238,7 @@ Connect this repository to [Aikido](https://www.aikido.dev) for dependency and s
 
 > **Submission:** Add a screenshot of the Aikido security report here after connecting the repo.
 >
-> `docs/assets/aikido-report.png` *(add after scan completes)*
+> `docs/assets/aikido-report.png` _(add after scan completes)_
 
 Never commit `.env` — only `.env.example` is tracked.
 
@@ -246,19 +246,19 @@ Never commit `.env` — only `.env.example` is tracked.
 
 ## Troubleshooting
 
-| Issue | Fix |
-|-------|-----|
-| SIE "warming up" / timeout | Cluster cold start — wait 5–7 min or pre-warm with `pnpm research:smoke` |
-| `encodeInto: is not implemented yet` | Attio sandbox can't run the msgpack SDK — app uses JSON fetch client (restart `pnpm dev`) |
-| Gemini 400 `additionalProperties` / `$schema` | Fixed via `responseJsonSchema` — restart `pnpm dev` and retry |
-| Blank "Approve research bundle" dialog | Attio requires `<SubmitButton/>` as direct child of `<Form/>` — fixed in approval dialog |
-| Write-back `value_not_found` for fit tier | `fit_tier` had no select options — run `pnpm seed:attio` or add Strong/Good/Weak/Unknown in Attio |
-| Missing Superlinked keys in Attio | Set `superlinked_*` and `gemini_api_key` in workspace app Settings (not build.attio.com) |
-| Missing Role link error | Link Person → Role; ensure Role has `description` |
-| Empty CV error | Paste CV in widget and click **Save CV** |
-| n8n 401 | Match `X-Webhook-Secret` to `WEBHOOK_SECRET` |
-| SLNG disabled | Set `ENABLE_SLNG=true` + `SLNG_API_KEY` in Attio app secrets |
-| Bulk research capped | Max 5 candidates per run (by design) |
+| Issue                                         | Fix                                                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| SIE "warming up" / timeout                    | Cluster cold start — wait 5–7 min or pre-warm with `pnpm research:smoke`                          |
+| `encodeInto: is not implemented yet`          | Attio sandbox can't run the msgpack SDK — app uses JSON fetch client (restart `pnpm dev`)         |
+| Gemini 400 `additionalProperties` / `$schema` | Fixed via `responseJsonSchema` — restart `pnpm dev` and retry                                     |
+| Blank "Approve research bundle" dialog        | Attio requires `<SubmitButton/>` as direct child of `<Form/>` — fixed in approval dialog          |
+| Write-back `value_not_found` for fit tier     | `fit_tier` had no select options — run `pnpm seed:attio` or add Strong/Good/Weak/Unknown in Attio |
+| Missing Superlinked keys in Attio             | Set `superlinked_*` and `gemini_api_key` in workspace app Settings (not build.attio.com)          |
+| Missing Role link error                       | Link Person → Role; ensure Role has `description`                                                 |
+| Empty CV error                                | Paste CV in widget and click **Save CV**                                                          |
+| n8n 401                                       | Match `X-Webhook-Secret` to `WEBHOOK_SECRET`                                                      |
+| SLNG disabled                                 | Set `ENABLE_SLNG=true` + `SLNG_API_KEY` in Attio app secrets                                      |
+| Bulk research capped                          | Max 5 candidates per run (by design)                                                              |
 
 ---
 

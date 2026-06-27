@@ -13,8 +13,10 @@ import {
   DEFAULT_REJECT_OPTIONS,
   type WritebackOptions,
 } from "@recruiting-copilot/core/schemas/writeback-options";
+import { formatGapAnalysisLines } from "@recruiting-copilot/core/utils/format-gap-analysis";
 import applyWritebackServer from "../server/apply-writeback.server";
 import type { ApprovalResult } from "./research-flow";
+import { formatBulletList, formatBulletSection } from "./format-bullets";
 import { DraftTextBlock } from "./format-prose";
 import { TierBadge } from "./tier-badge";
 
@@ -28,13 +30,6 @@ export interface ApprovalDialogProps {
   onApproved?: (result?: ApprovalResult) => void;
   initialOptions?: Partial<WritebackOptions>;
   focus?: "review" | "rejection";
-}
-
-function formatBullets(items: string[]): string {
-  if (items.length === 0) {
-    return "None listed.";
-  }
-  return items.map((item) => `• ${item}`).join("\n");
 }
 
 function buildOptions(values: {
@@ -181,21 +176,11 @@ export function ApprovalDialog({
     }
   };
 
-  const gapLines =
-    bundle.gapAnalysis.length === 0
-      ? "No major gaps flagged."
-      : bundle.gapAnalysis
-          .map((gap) => `[${gap.severity}] ${gap.area}: ${gap.gap}`)
-          .join("\n\n");
+  const gapLines = formatGapAnalysisLines(bundle.gapAnalysis);
 
-  const webLines =
-    bundle.webBullets.length === 0
-      ? ""
-      : bundle.webBullets
-          .map((bullet) =>
-            bullet.source ? `• ${bullet.text}\n  ${bullet.source}` : `• ${bullet.text}`,
-          )
-          .join("\n\n");
+  const webBullets = bundle.webBullets.map((bullet) =>
+    bullet.source ? `${bullet.text} — ${bullet.source}` : bullet.text,
+  );
 
   return (
     <Form onSubmit={handleApprove}>
@@ -211,17 +196,14 @@ export function ApprovalDialog({
         <>
           <Section title="Fit reasoning">
             <TextBlock>
-              {"Pros\n"}
-              {formatBullets(bundle.fitReasoning?.pros ?? [])}
-            </TextBlock>
-            <TextBlock>
-              {"Cons\n"}
-              {formatBullets(bundle.fitReasoning?.cons ?? [])}
+              {formatBulletSection("Pros", bundle.fitReasoning?.pros ?? [])}
+              {"\n\n"}
+              {formatBulletSection("Cons", bundle.fitReasoning?.cons ?? [])}
             </TextBlock>
           </Section>
 
           <Section title="Gap analysis">
-            <TextBlock>{gapLines}</TextBlock>
+            <TextBlock>{formatBulletList(gapLines, "No major gaps flagged.")}</TextBlock>
           </Section>
         </>
       )}
@@ -246,9 +228,9 @@ export function ApprovalDialog({
             <DraftTextBlock text={bundle.candidateEmailDraft} />
           </Section>
 
-          {webLines && (
+          {webBullets.length > 0 && (
             <Section title="Web / LinkedIn bullets">
-              <TextBlock>{webLines}</TextBlock>
+              <TextBlock>{formatBulletList(webBullets)}</TextBlock>
             </Section>
           )}
         </>
